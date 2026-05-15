@@ -340,7 +340,8 @@ function load(){
   }
   draw(PAGE,'');
   applySidebarPerms();
-}D.users=USERS;try{localStorage.setItem(SK,JSON.stringify(D));}catch(e){}}
+}
+function save(){D.users=USERS;try{localStorage.setItem(SK,JSON.stringify(D));}catch(e){}}
 function syncMatStatut(){
   var mapActif={'En cours':'En cours','En attente':"En attente d'acceptation",'Devis fait':'Devis fait'};
   D.materiels.forEach(function(m){m.statut='';});
@@ -1551,12 +1552,7 @@ if(EID){var i=D.techniciens.findIndex(function(x){return x.id===EID;});if(i>=0)D
 var o={id:EID||(nextId(‘stock’)),ref:gv(‘fref’),designation:gv(‘fdes’),categorie:gv(‘fcat’),qte:gn(‘fqte’),qte_min:gn(‘fmin’),prix:gn(‘fprix’),fournisseur:gv(‘ffour’),delai_reappro:gn(‘fdelai’)||7,derniere_commande:gv(‘fdcmd’),nb_commandes:(EID?((D.stock.find(function(x){return x.id===EID;})||{}).nb_commandes||0):0)};
 if(EID){var i=D.stock.findIndex(function(x){return x.id===EID;});if(i>=0)D.stock[i]=o;}else D.stock.push(o);
 }
-(async function(){
-var tables={inter:‘interventions’,mat:‘materiels’,cli:‘clients’,tech:‘techniciens’,stock:‘stock’};
-var tbl=tables[MODE];
-if(tbl&&o){save();}
 save();closeModal();draw(PAGE,LS);
-})();
 }
 
 /* ================================================================
