@@ -189,29 +189,8 @@ textarea.fi{resize:vertical;}
 .sparkbar{display:flex;align-items:flex-end;gap:3px;height:36px;}
 .sbar{flex:1;background:var(--blue);border-radius:2px 2px 0 0;opacity:.75;min-width:6px;}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<div id="login-overlay" style="position:fixed;inset:0;z-index:9999;background:#f0efe9;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,sans-serif">
-  <div style="background:#fff;border:1px solid #e4e3db;border-radius:16px;padding:40px;width:100%;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,.08)">
-    <div style="text-align:center;margin-bottom:28px">
-      <div style="font-size:32px;margin-bottom:10px">🔧</div>
-      <div style="font-size:18px;font-weight:800;color:#1a1a18">Chastagner Location SAV</div>
-      <div style="font-size:12px;color:#6b7280;margin-top:4px;text-transform:uppercase;letter-spacing:.5px">GMAO Maintenance</div>
-    </div>
-    <div id="login-error" style="display:none;background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:16px"></div>
-    <div style="margin-bottom:14px">
-      <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Email</label>
-      <input id="login-email" type="email" placeholder="votre@email.com" style="width:100%;padding:10px 14px;border:1px solid #e4e3db;border-radius:8px;font-size:14px;color:#1a1a18;box-sizing:border-box;outline:none">
-    </div>
-    <div style="margin-bottom:22px">
-      <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Mot de passe</label>
-      <input id="login-pass" type="password" placeholder="••••••••" style="width:100%;padding:10px 14px;border:1px solid #e4e3db;border-radius:8px;font-size:14px;color:#1a1a18;box-sizing:border-box;outline:none" onkeydown="if(event.key==='Enter')doLogin()">
-    </div>
-    <button id="login-btn" onclick="doLogin()" style="width:100%;padding:12px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Se connecter</button>
-    <div id="login-loading" style="display:none;text-align:center;margin-top:12px;font-size:12px;color:#6b7280">Connexion en cours…</div>
-  </div>
-</div>
 
 <div class="app" style="display:flex">
   <div class="sb">
@@ -234,9 +213,6 @@ textarea.fi{resize:vertical;}
       <div class="ni" id="ni-stock" onclick="goPage('stock',this)"><span class="ni-dot"></span>Pièces détachées</div>
       <div class="sb-sec">Administration</div>
       <div class="ni" id="ni-settings" onclick="goPage('settings',this)"><span class="ni-dot"></span>Réglages</div>
-    </div>
-    <div style="padding:8px 14px;border-top:1px solid var(--bdr);">
-      <button onclick="doLogout()" style="width:100%;padding:7px 10px;background:var(--redbg);color:var(--redtxt);border:1px solid #fca5a5;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px"><span>⏻</span>Se déconnecter</button>
     </div>
     <div class="sb-user">
       <div class="av" id="sb-av">?</div>
@@ -273,123 +249,6 @@ textarea.fi{resize:vertical;}
 /* ================================================================
    SUPABASE
 ================================================================ */
-var SUPA_URL='https://gruruldzmkimknynnzpi.supabase.co';
-var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdydXJ1bGR6bWtpbWtueW5uenBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MDYzOTIsImV4cCI6MjA5NDE4MjM5Mn0.NqvGzO8CM0EETApn6-skwCQaqag7aq-faRSuFlF5cgg';
-var supa;
-try {
-  supa = supabase.createClient(SUPA_URL, SUPA_KEY);
-} catch(e) {
-  document.getElementById('login-error').style.display='block';
-  document.getElementById('login-error').textContent='Erreur init Supabase: '+e.message;
-}
-
-function showLoginOverlay(msg){
-  var ov=document.getElementById('login-overlay');
-  if(ov)ov.style.display='flex';
-  var err=document.getElementById('login-error');
-  if(err){err.style.display=msg?'block':'none';err.textContent=msg||'';}
-  var em=document.getElementById('login-email');if(em)em.value='';
-  var ps=document.getElementById('login-pass');if(ps)ps.value='';
-}
-
-function hideLoginOverlay(){
-  var ov=document.getElementById('login-overlay');
-  if(ov)ov.style.display='none';
-}
-
-async function doLogin(){
-  if(!supa){showLoginOverlay('Erreur : bibliothèque Supabase non chargée. Vérifiez votre connexion internet.');return;}
-  var email=(document.getElementById('login-email')||{}).value||'';
-  var pass=(document.getElementById('login-pass')||{}).value||'';
-  if(!email||!pass){showLoginOverlay('Veuillez remplir tous les champs.');return;}
-  var btn=document.getElementById('login-btn');
-  var ldg=document.getElementById('login-loading');
-  if(btn)btn.disabled=true;
-  if(ldg)ldg.style.display='block';
-  var result=await supa.auth.signInWithPassword({email:email,password:pass});
-  if(result.error){
-    if(btn)btn.disabled=false;
-    if(ldg)ldg.style.display='none';
-    showLoginOverlay('Erreur : '+result.error.message);
-  } else {
-    try {
-      await loadFromSupabase();
-      hideLoginOverlay();
-      var user = result.data && result.data.user ? result.data.user : null;
-      if(user) {
-        var nom = (user.user_metadata && user.user_metadata.full_name) || user.email || '?';
-        var initiales = nom.split(' ').map(function(w){return w[0]||'';}).slice(0,2).join('').toUpperCase() || '?';
-        var sbName = document.getElementById('sb-name');
-        var sbAv = document.getElementById('sb-av');
-        var sbRole = document.getElementById('sb-role');
-        if(sbName) sbName.textContent = nom;
-        if(sbAv) sbAv.textContent = initiales;
-        var localUser = (USERS||[]).find(function(u){return u.email===user.email || u.username===user.email;});
-        if(localUser) {
-          CURRENT_USER = localUser;
-          if(sbRole) sbRole.textContent = (ROLES[localUser.role]||{label:localUser.role}).label || localUser.role;
-        } else {
-          /* Utilisateur Supabase mais pas encore dans USERS locaux — créateur par défaut */
-          CURRENT_USER = {id:0, nom:nom, email:user.email, role:'createur'};
-          if(sbRole) sbRole.textContent = 'Créateur';
-        }
-      }
-      applySidebarPerms();
-      draw(PAGE,'');
-    } catch(err) {
-      if(btn)btn.disabled=false;
-      if(ldg)ldg.style.display='none';
-      showLoginOverlay('Erreur après connexion : '+(err.message||err));
-    }
-  }
-}
-
-async function doLogout(){
-  await supa.auth.signOut();
-  draw('dashboard','');
-  showLoginOverlay();
-}
-
-async function sbLoad(table){
-  var r=await supa.from(table).select('*').order('id');
-  if(r.error){console.error(table,r.error);return[];}
-  return r.data||[];
-}
-
-async function sbInsert(table,obj){
-  var c=Object.assign({},obj);delete c.id;delete c.created_at;delete c.updated_at;
-  var r=await supa.from(table).insert(c).select().single();
-  if(r.error){console.error('insert',table,r.error);return null;}
-  return r.data;
-}
-
-async function sbUpdate(table,id,obj){
-  var c=Object.assign({},obj);delete c.id;delete c.created_at;delete c.updated_at;
-  var r=await supa.from(table).update(c).eq('id',id).select().single();
-  if(r.error){console.error('update',table,r.error);return null;}
-  return r.data;
-}
-
-async function sbDelete(table,id){
-  var r=await supa.from(table).delete().eq('id',id);
-  if(r.error){console.error('delete',table,r.error);}
-}
-
-async function loadFromSupabase(){
-  var results=await Promise.all([
-    sbLoad('interventions'),sbLoad('historique'),sbLoad('materiels'),
-    sbLoad('clients'),sbLoad('techniciens'),sbLoad('stock')
-  ]);
-  var def=buildDefaults();
-  /* Use Supabase data if available, else use demo defaults */
-  D.interventions  = results[0].length ? results[0] : (D.interventions||def.interventions);
-  D.historique     = results[1].length ? results[1] : (D.historique||def.historique);
-  D.materiels      = results[2].length ? results[2] : (D.materiels||def.materiels);
-  D.clients        = results[3].length ? results[3] : (D.clients||def.clients);
-  D.techniciens    = results[4].length ? results[4] : (D.techniciens||def.techniciens);
-  D.stock          = results[5].length ? results[5] : (D.stock||def.stock);
-  syncMatStatut();
-}
 
 /* ================================================================
    CONSTANTS & STATE
@@ -482,15 +341,6 @@ function load(){
   draw(PAGE,'');
   applySidebarPerms();
 }D.users=USERS;try{localStorage.setItem(SK,JSON.stringify(D));}catch(e){}}
-async function saveToSupa(table,obj){
-  if(obj.id&&obj.id>0){
-    var saved=await sbUpdate(table,obj.id,obj);
-    if(saved)obj.id=saved.id;
-  } else {
-    var saved=await sbInsert(table,obj);
-    if(saved)obj.id=saved.id;
-  }
-}
 function syncMatStatut(){
   var mapActif={'En cours':'En cours','En attente':"En attente d'acceptation",'Devis fait':'Devis fait'};
   D.materiels.forEach(function(m){m.statut='';});
@@ -905,11 +755,7 @@ function cloreInter(id){
   i.statut='Terminé';i.date_cloture=todayStr();
   syncMatStatut();
   D.historique.unshift(i);D.interventions.splice(idx,1);
-  (async function(){
-    await sbInsert('historique',i);
-    await sbDelete('interventions',i.id);
-    save();draw(PAGE,LS);
-  })();
+  save();draw(PAGE,LS);
 }
 
 /* ================================================================
@@ -1482,7 +1328,7 @@ function doDel(){
   var tables={inter:'interventions',mat:'materiels',cli:'clients',tech:'techniciens',stock:'stock'};
   var tbl=tables[MODE];
   if(tbl){D[tbl]=D[tbl].filter(function(x){return x.id!==EID;});
-    (async function(){await sbDelete(tbl,EID);save();closeModal();draw(PAGE,LS);})();}
+    save();closeModal();draw(PAGE,LS);}
 }
 function switchTab(t){document.querySelectorAll('.mtab').forEach(function(el){el.classList.toggle('on',el.dataset.tab===t);});document.querySelectorAll('.tab-pane').forEach(function(el){el.classList.toggle('show',el.id==='tab-'+t);});}
 function openAdd(){var m={interventions:'inter',materiels:'mat',clients:'cli',techniciens:'tech',stock:'stock'};var t=m[PAGE];if(t==='inter')mInter();else if(t==='mat')mMat();else if(t==='cli')mCli();else if(t==='tech')mTech();else if(t==='stock')mStock();}
@@ -1645,7 +1491,7 @@ openModal(id?‘Modifier pièce — ‘+escH(d.ref):‘Nouvelle pièce’,
 ‘<div class="fg"><label class="fl">Fournisseur</label><input class="fi" id="ffour" value="'+escH(d.fournisseur||'')+'"></div></div>’,!!id);
 }
 function editStock(id){mStock(Number(id));}
-function cmdStock(id){id=Number(id);var s=D.stock.find(function(x){return x.id===id;});if(!s)return;var q=prompt(‘Quantité reçue pour ‘+s.ref+’ ?’,’’);if(!q||isNaN(Number(q))||Number(q)<=0)return;s.qte=s.qte+Number(q);s.derniere_commande=todayStr();s.nb_commandes=(s.nb_commandes||0)+1;(async function(){await sbUpdate(‘stock’,s.id,s);save();draw(PAGE,LS);})();}
+function cmdStock(id){id=Number(id);var s=D.stock.find(function(x){return x.id===id;});if(!s)return;var q=prompt(‘Quantité reçue pour ‘+s.ref+’ ?’,’’);if(!q||isNaN(Number(q))||Number(q)<=0)return;s.qte=s.qte+Number(q);s.derniere_commande=todayStr();s.nb_commandes=(s.nb_commandes||0)+1;save();draw(PAGE,LS);}
 
 /* USERS */
 function newUser(){editUser(null);}
@@ -1708,7 +1554,7 @@ if(EID){var i=D.stock.findIndex(function(x){return x.id===EID;});if(i>=0)D.stock
 (async function(){
 var tables={inter:‘interventions’,mat:‘materiels’,cli:‘clients’,tech:‘techniciens’,stock:‘stock’};
 var tbl=tables[MODE];
-if(tbl&&o){await saveToSupa(tbl,o);}
+if(tbl&&o){save();}
 save();closeModal();draw(PAGE,LS);
 })();
 }
@@ -1717,20 +1563,7 @@ save();closeModal();draw(PAGE,LS);
 BOOT
 ================================================================ */
 load();
-(async function(){
-var s=await supa.auth.getSession();
-if(s.data&&s.data.session){
-await loadFromSupabase();
-hideLoginOverlay();
 draw(PAGE,’’);
-} else {
-showLoginOverlay();
-draw(PAGE,’’);
-}
-supa.auth.onAuthStateChange(function(event){
-if(event===‘SIGNED_OUT’){showLoginOverlay();}
-});
-})();
 </script>
 
 </body>
