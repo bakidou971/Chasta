@@ -654,7 +654,7 @@ function rDash(){
     '<div class="kp" style="border-left-color:var(--blue)"><div class="kp-l">Interventions actives</div><div class="kp-v">'+k.totalInter+'</div><div class="kp-s">'+k.totalHist+' archivées</div></div>'+
     '<div class="kp" style="border-left-color:var(--red);cursor:pointer" onclick="showOverdue()" title="Cliquer pour voir les interventions en retard"><div class="kp-l">En retard ↗</div><div class="kp-v">'+k.overdue+'</div><div class="kp-s">cliquer pour voir</div></div>'+
     '<div class="kp" style="border-left-color:var(--amber)"><div class="kp-l">Temps moy. interv.</div><div class="kp-v">'+(k.avgTime||'—')+(k.avgTime?' j.':'')+'</div><div class="kp-s">jours calendaires</div></div>'+
-    '<div class="kp" style="border-left-color:var(--green)"><div class="kp-l">CA archivé</div><div class="kp-v">'+eur(k.totalCA)+'</div><div class="kp-s">devis acceptés uniquement</div></div>'+
+    '<div class="kp" style="border-left-color:var(--green)"><div class="kp-l">CA en cours</div><div class="kp-v">'+eur(D.interventions.reduce(function(a,i){return a+dvCA(i);},0))+'</div><div class="kp-s">interventions actives</div></div>'+
   '</div>'+
   '<div class="chart-grid-2">'+
     '<div class="chart-box"><div class="chart-title">Statut des interventions actives</div><div class="donut-wrap">'+donut1+'<div class="donut-legend">'+donut1Legend+'</div></div></div>'+
@@ -1121,8 +1121,6 @@ function rAnalytics(){
     '<div class="tw"><table class="tbl"><thead><tr><th>Article</th><th>N° Série</th><th>Client</th><th>Fréquence</th></tr></thead><tbody>'+recRows+'</tbody></table></div>'+
   '</div>';
 }
-
-
 function rMat(f){
   var vgpR=getVGPRelances();var vrMap={};vgpR.forEach(function(v){vrMap[v.inter.serie]={daysLeft:v.daysLeft,calDays:v.calDays,date:v.relanceDate};});
   var clients=uniq(D.materiels.map(function(m){return m.client;}).filter(Boolean));
@@ -1267,77 +1265,168 @@ function resetTechFilters(){['ft-fonc','ft-zone','ft-stat'].forEach(function(id)
 function rStock(f){
   var all=D.stock.filter(function(s){return!f||s.ref.toLowerCase().indexOf(f)>=0||s.designation.toLowerCase().indexOf(f)>=0||s.categorie.toLowerCase().indexOf(f)>=0;});
   var val=D.stock.reduce(function(a,s){return a+s.qte*s.prix;},0);
-  var rows=all.map(function(s){
-    var e,c;if(s.qte===0){e='Rupture';c='b-red';}else if(s.qte<=s.qte_min){e='Alerte';c='b-amber';}else{e='OK';c='b-green';}
-    return'<tr>'+
-      '<td style="font-size:10px;color:var(--txt2);font-family:monospace">STK-'+String(s.id).padStart(3,'0')+'</td>'+
-      '<td style="font-weight:700;font-size:11px">'+escH(s.ref)+'</td>'+
-      '<td>'+escH(s.designation)+'</td><td>'+bdg('b-gray',escH(s.categorie))+'</td>'+
-      '<td style="font-weight:700">'+s.qte+'</td><td style="color:var(--txt2)">'+s.qte_min+'</td>'+
-      '<td style="font-weight:700">'+eur(s.prix)+'</td><td style="color:var(--txt2)">'+escH(s.fournisseur)+'</td>'+
-      '<td>'+bdg(c,e)+'</td>'+
-      '<td><button class="bs" style="font-size:10px;padding:3px 7px" onclick="editStock('+s.id+')">Modifier</button></td></tr>';
+  var catStyle={'Accrochage':{icon:'🔗',color:'#2563eb'},'Hydraulique':{icon:'💧',color:'#0891b2'},'Moteur':{icon:'⚙️',color:'#7c3aed'},'Lubrifiant':{icon:'🛢️',color:'#d97706'},'Visserie':{icon:'🔩',color:'#6b7280'},'Levage':{icon:'🏗️',color:'#ea580c'},'Roulement':{icon:'⭕',color:'#16a34a'},'Sécurité':{icon:'🛡️',color:'#dc2626'},'Transmission':{icon:'🔄',color:'#9333ea'},'Électrique':{icon:'⚡',color:'#eab308'}};
+  function getCat(c){return catStyle[c]||{icon:'📦',color:'#6b7280'};}
+  var cards=all.map(function(s){
+    var cs=getCat(s.categorie);
+    var etat,ecol;
+    if(s.qte===0){etat='Rupture';ecol='#dc2626';}else if(s.qte<=s.qte_min){etat='Alerte';ecol='#d97706';}else{etat='OK';ecol='#16a34a';}
+    var pct=s.qte_min>0?Math.min(100,Math.round(s.qte/Math.max(s.qte,s.qte_min*2)*100)):100;
+    return'<div style="background:var(--bg1);border:1px solid var(--bdr);border-radius:var(--rl);padding:14px;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden">'+
+      '<div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:'+cs.color+'"></div>'+
+      '<div style="padding-left:8px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">'+
+          '<div style="display:flex;align-items:center;gap:8px">'+
+            '<div style="font-size:20px;line-height:1">'+cs.icon+'</div>'+
+            '<div><div style="font-size:11px;font-weight:800;color:var(--txt)">'+escH(s.ref)+'</div>'+
+            '<div style="font-size:10px;color:var(--txt2)">'+escH(s.designation)+'</div></div>'+
+          '</div>'+
+          '<div style="background:'+ecol+'18;color:'+ecol+';border:1px solid '+ecol+'44;border-radius:99px;font-size:9px;font-weight:700;padding:2px 7px">'+etat+'</div>'+
+        '</div>'+
+        '<div style="margin-bottom:6px">'+
+          '<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--txt2);margin-bottom:3px">'+
+            '<span>Stock : <strong style="color:var(--txt)">'+s.qte+'</strong></span><span>Seuil : '+s.qte_min+'</span>'+
+          '</div>'+
+          '<div style="background:var(--bg2);border-radius:3px;height:5px"><div style="background:'+ecol+';height:5px;border-radius:3px;width:'+pct+'%"></div></div>'+
+        '</div>'+
+        '<div style="display:flex;justify-content:space-between;align-items:center">'+
+          '<div style="font-size:10px;color:var(--txt2)">'+escH(s.fournisseur)+'</div>'+
+          '<div style="display:flex;align-items:center;gap:6px">'+
+            '<div style="font-size:11px;font-weight:700;color:var(--txt)">'+eur(s.prix)+'</div>'+
+            '<button class="bs" style="font-size:9px;padding:2px 7px" onclick="editStock('+s.id+')">Modifier</button>'+
+          '</div>'+
+        '</div>'+
+      '</div></div>';
   }).join('');
-  var listeTab='<div class="kg" style="grid-template-columns:repeat(3,minmax(0,1fr))">'+
-    '<div class="kp" style="border-left-color:var(--blue)"><div class="kp-l">Références</div><div class="kp-v">'+D.stock.length+'</div></div>'+
-    '<div class="kp" style="border-left-color:var(--red)"><div class="kp-l">Alertes</div><div class="kp-v">'+D.stock.filter(function(s){return s.qte<=s.qte_min;}).length+'</div></div>'+
-    '<div class="kp" style="border-left-color:var(--green)"><div class="kp-l">Valeur totale</div><div class="kp-v">'+eur(val)+'</div></div></div>'+
-    '<div class="card"><div class="ch"><span class="ct2">Pièces détachées</span><span class="cc">'+all.length+'</span></div>'+
-    '<div class="tw"><table class="tbl"><thead><tr><th>ID</th><th>Réf.</th><th>Désignation</th><th>Catégorie</th><th>Qté</th><th>Seuil</th><th>Prix</th><th>Fournisseur</th><th>État</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
-  /* KPI tab - reuse analytics stock block */
-  var sk=calcStockKPIs();var st=D.stock||[];
-  var kpiTab='';
-  if(st.length){
-    var nOk2=st.filter(function(s){return s.qte>s.qte_min;}).length;
-    var gP=sk.tauxDispo/100;var gCol2=gP>=0.8?'#16A34A':gP>=0.6?'#D97706':'#DC2626';
-    var cr2=sk.rupture>0?'var(--red)':'var(--greentxt)';var tot2=st.length||1;
-    var deg2=0,arcs2='';
-    [{n:nOk2,c:'#16A34A'},{n:sk.alerte,c:'#D97706'},{n:sk.rupture,c:'#DC2626'}].forEach(function(sl){
-      if(!sl.n)return;var d=sl.n/tot2*360;if(d>=360)d=359.99;
-      var s2=deg2*Math.PI/180,e2=(deg2+d)*Math.PI/180;
-      var x1=40+34*Math.cos(s2-Math.PI/2),y1=40+34*Math.sin(s2-Math.PI/2);
-      var x2=40+34*Math.cos(e2-Math.PI/2),y2=40+34*Math.sin(e2-Math.PI/2);
-      arcs2+='<path d="M40,40 L'+x1+','+y1+' A34,34 0 '+(d>180?1:0)+',1 '+x2+','+y2+' Z" fill="'+sl.c+'"/>';
-      deg2+=d;
-    });
-    var donutA='<svg viewBox="0 0 80 80" width="68" height="68" style="display:block;flex-shrink:0">'+arcs2+'<circle cx="40" cy="40" r="20" fill="var(--bg)"/><text x="40" y="44" font-size="11" font-weight="bold" fill="var(--txt)" text-anchor="middle">'+tot2+'</text></svg>';
-    var gR2=32,gCx2=46,gCy2=40,gAng2=180*gP,gFull2=180-gAng2;
-    var gpx2=gCx2+gR2*Math.cos(gFull2*Math.PI/180),gpy2=gCy2-gR2*Math.sin(gFull2*Math.PI/180);
-    var jaugeA='<svg viewBox="0 0 92 52" width="88" height="52" style="display:block;margin:0 auto">'+
-      '<path d="M'+(gCx2-gR2)+','+gCy2+' A'+gR2+','+gR2+' 0 0,1 '+(gCx2+gR2)+','+gCy2+'" fill="none" stroke="#E5E7EB" stroke-width="8" stroke-linecap="round"/>'+
-      '<path d="M'+(gCx2-gR2)+','+gCy2+' A'+gR2+','+gR2+' 0 '+(gAng2>90?1:0)+',1 '+gpx2+','+gpy2+'" fill="none" stroke="'+gCol2+'" stroke-width="8" stroke-linecap="round"/>'+
-      '<text x="'+gCx2+'" y="'+(gCy2-2)+'" font-size="13" font-weight="bold" fill="'+gCol2+'" text-anchor="middle">'+sk.tauxDispo+'%</text>'+
-      '<text x="'+gCx2+'" y="'+(gCy2+12)+'" font-size="7" fill="var(--txt2)" text-anchor="middle">disponibilité</text></svg>';
-    var barsA=sk.top5.length?sk.top5.map(function(p,i){
-      var w=Math.max(6,Math.round(p.count/(sk.top5[0].count||1)*100));
-      var cols=['#2563EB','#7C3AED','#0891B2','#16A34A','#D97706'];
-      return'<div style="margin-bottom:5px"><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--txt2);margin-bottom:2px"><span>'+escH(p.nom.length>18?p.nom.substring(0,18)+'…':p.nom)+'</span><span style="font-weight:700;color:var(--blue)">'+p.count+'×</span></div>'+
-        '<div style="background:var(--bg2);border-radius:3px;height:6px"><div style="background:'+cols[i%5]+';height:6px;border-radius:3px;width:'+w+'%"></div></div></div>';
-    }).join(''):'<div style="color:var(--txt3);font-size:11px">Aucune pièce utilisée.</div>';
-    kpiTab='<div class="kg" style="grid-template-columns:repeat(4,minmax(0,1fr))">'+
-      '<div class="kp" style="border-left-color:var(--red)"><div class="kp-l">Taux rupture</div><div class="kp-v" style="color:'+cr2+'">'+sk.tauxRupture+'%</div><div class="kp-s">'+sk.rupture+' rupture — '+sk.alerte+' alerte</div></div>'+
-      '<div class="kp" style="border-left-color:var(--blue)"><div class="kp-l">Valeur stock</div><div class="kp-v">'+eur(sk.valeur)+'</div><div class="kp-s">'+tot2+' réf.</div></div>'+
-      '<div class="kp" style="border-left-color:var(--amber)"><div class="kp-l">Délai réappro.</div><div class="kp-v">'+sk.avgDelai+' j.</div><div class="kp-s">'+sk.nbCmds+' cmd.</div></div>'+
-      '<div class="kp" style="border-left-color:var(--greentxt)"><div class="kp-l">Dispo. pièces</div><div class="kp-v" style="color:'+gCol2+'">'+sk.tauxDispo+'%</div><div class="kp-s">'+(sk.interBloquees?sk.interBloquees+' bloquée(s)':'Toutes dispo.')+'</div></div>'+
+  var alertes=D.stock.filter(function(s){return s.qte<=s.qte_min;}).length;
+  var listeTab='<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px">'+
+    '<div style="background:var(--bg1);border:1px solid var(--bdr);border-top:3px solid #2563eb;border-radius:var(--rl);padding:16px">'+
+      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--txt2)">Références</div>'+
+      '<div style="font-size:30px;font-weight:800;color:#2563eb;line-height:1.2;margin-top:4px">'+D.stock.length+'</div>'+
+      '<div style="font-size:10px;color:var(--txt3);margin-top:2px">pièces en catalogue</div>'+
     '</div>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">'+
-      '<div class="card" style="padding:12px"><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--txt2);margin-bottom:8px">État stock</div>'+
-        '<div style="display:flex;align-items:center;gap:8px">'+donutA+
-          '<div style="font-size:10px;line-height:1.8"><div><span style="color:#16A34A;font-weight:700">●</span> OK : '+nOk2+'</div>'+
-          (sk.alerte?'<div><span style="color:#D97706;font-weight:700">●</span> Alerte : '+sk.alerte+'</div>':'')+
-          (sk.rupture?'<div><span style="color:#DC2626;font-weight:700">●</span> Rupture : '+sk.rupture+'</div>':'')+
-          '</div></div></div>'+
-      '<div class="card" style="padding:12px"><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--txt2);margin-bottom:4px">Taux disponibilité</div>'+jaugeA+'</div>'+
-      '<div class="card" style="padding:12px"><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--txt2);margin-bottom:8px">Top pièces</div>'+barsA+'</div>'+
-    '</div>';
+    '<div style="background:var(--bg1);border:1px solid var(--bdr);border-top:3px solid '+(alertes>0?'#dc2626':'#16a34a')+';border-radius:var(--rl);padding:16px">'+
+      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--txt2)">Alertes & Ruptures</div>'+
+      '<div style="font-size:30px;font-weight:800;color:'+(alertes>0?'#dc2626':'#16a34a')+';line-height:1.2;margin-top:4px">'+alertes+'</div>'+
+      '<div style="font-size:10px;color:var(--txt3);margin-top:2px">'+(alertes>0?'action requise':'stock nominal')+'</div>'+
+    '</div>'+
+    '<div style="background:var(--bg1);border:1px solid var(--bdr);border-top:3px solid #16a34a;border-radius:var(--rl);padding:16px">'+
+      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--txt2)">Valeur totale</div>'+
+      '<div style="font-size:24px;font-weight:800;color:#16a34a;line-height:1.2;margin-top:4px">'+eur(val)+'</div>'+
+      '<div style="font-size:10px;color:var(--txt3);margin-top:2px">stock valorisé</div>'+
+    '</div>'+
+  '</div>';
+  listeTab+='<div class="card"><div class="ch"><span class="ct2">Pièces détachées</span><span class="cc">'+all.length+'</span></div>'+
+    '<div class="tw"><table class="tbl"><thead><tr><th>ID</th><th>Réf.</th><th>Désignation</th><th>Catégorie</th><th>Qté</th><th>Seuil</th><th>Prix</th><th>Fournisseur</th><th>État</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+  var sk=calcStockKPIs();var st=D.stock||[];
+  var kpiTab='<div style="color:var(--txt2);padding:20px;text-align:center">Aucune donnée stock.</div>';
+  if(st.length){
+    var nOk=st.filter(function(s){return s.qte>s.qte_min;}).length;
+    var tot=st.length;var cr=sk.rupture>0?'#dc2626':'#16a34a';
+    var gP=sk.tauxDispo/100;var gCol=gP>=0.8?'#16a34a':gP>=0.6?'#d97706':'#dc2626';
+    var deg=0,arcs='';
+    [{n:nOk,c:'#16a34a'},{n:sk.alerte,c:'#d97706'},{n:sk.rupture,c:'#dc2626'}].forEach(function(sl){
+      if(!sl.n)return;var d=sl.n/tot*360;if(d>=360)d=359.99;
+      var s1=deg*Math.PI/180,e1=(deg+d)*Math.PI/180;
+      var x1=50+38*Math.cos(s1-Math.PI/2),y1=50+38*Math.sin(s1-Math.PI/2);
+      var x2=50+38*Math.cos(e1-Math.PI/2),y2=50+38*Math.sin(e1-Math.PI/2);
+      arcs+='<path d="M50,50 L'+x1+','+y1+' A38,38 0 '+(d>180?1:0)+',1 '+x2+','+y2+' Z" fill="'+sl.c+'" opacity=".9"/>';
+      deg+=d;
+    });
+    var donut='<svg viewBox="0 0 100 100" width="90" height="90" style="display:block;margin:0 auto">'+arcs+
+      '<circle cx="50" cy="50" r="24" fill="var(--bg1)"/>'+
+      '<text x="50" y="48" font-size="14" font-weight="800" fill="var(--txt)" text-anchor="middle">'+tot+'</text>'+
+      '<text x="50" y="60" font-size="8" fill="var(--txt2)" text-anchor="middle">réf.</text></svg>'+
+      '<div style="display:flex;justify-content:center;gap:12px;margin-top:6px;font-size:10px">'+
+        '<span style="color:#16a34a">● OK : '+nOk+'</span>'+
+        (sk.alerte?'<span style="color:#d97706">● Alerte : '+sk.alerte+'</span>':'')+
+        (sk.rupture?'<span style="color:#dc2626">● Rupture : '+sk.rupture+'</span>':'')+
+      '</div>';
+    var gR=36;var gCx=50;var gCy=48;var gAng=180*gP;var gFull=180-gAng;
+    var gpx=gCx+gR*Math.cos(gFull*Math.PI/180),gpy=gCy-gR*Math.sin(gFull*Math.PI/180);
+    var jauge='<svg viewBox="0 0 100 60" width="130" height="78" style="display:block;margin:0 auto">'+
+      '<path d="M'+(gCx-gR)+','+gCy+' A'+gR+','+gR+' 0 0,1 '+(gCx+gR)+','+gCy+'" fill="none" stroke="#e4e3db" stroke-width="10" stroke-linecap="round"/>'+
+      (gP>0?'<path d="M'+(gCx-gR)+','+gCy+' A'+gR+','+gR+' 0 '+(gAng>90?1:0)+',1 '+gpx+','+gpy+'" fill="none" stroke="'+gCol+'" stroke-width="10" stroke-linecap="round"/>':'')+
+      '<text x="'+gCx+'" y="'+(gCy-4)+'" font-size="14" font-weight="800" fill="'+gCol+'" text-anchor="middle">'+sk.tauxDispo+'%</text>'+
+      '<text x="'+gCx+'" y="'+(gCy+10)+'" font-size="7" fill="var(--txt2)" text-anchor="middle">disponibilité</text></svg>'+
+      '<div style="text-align:center;font-size:10px;color:var(--txt2)">'+(sk.interBloquees?sk.interBloquees+' interv. bloquée(s)':'Toutes pièces disponibles')+'</div>';
+    var rP=sk.tauxRupture/100;var rAng=180*rP;var rFull=180-rAng;
+    var rpx=gCx+gR*Math.cos(rFull*Math.PI/180),rpy=gCy-gR*Math.sin(rFull*Math.PI/180);
+    var rCol=sk.tauxRupture<=10?'#16a34a':sk.tauxRupture<=30?'#d97706':'#dc2626';
+    var jaugeR='<svg viewBox="0 0 100 60" width="130" height="78" style="display:block;margin:0 auto">'+
+      '<path d="M'+(gCx-gR)+','+gCy+' A'+gR+','+gR+' 0 0,1 '+(gCx+gR)+','+gCy+'" fill="none" stroke="#e4e3db" stroke-width="10" stroke-linecap="round"/>'+
+      (rP>0?'<path d="M'+(gCx-gR)+','+gCy+' A'+gR+','+gR+' 0 '+(rAng>90?1:0)+',1 '+rpx+','+rpy+'" fill="none" stroke="'+rCol+'" stroke-width="10" stroke-linecap="round"/>':'')+
+      '<text x="'+gCx+'" y="'+(gCy-4)+'" font-size="14" font-weight="800" fill="'+rCol+'" text-anchor="middle">'+sk.tauxRupture+'%</text>'+
+      '<text x="'+gCx+'" y="'+(gCy+10)+'" font-size="7" fill="var(--txt2)" text-anchor="middle">taux rupture</text></svg>'+
+      '<div style="text-align:center;font-size:10px;color:var(--txt2)">'+sk.rupture+' rupture(s) — '+sk.alerte+' alerte(s)</div>';
+    var barsTop=sk.top5.length?sk.top5.map(function(p,i){
+      var w=Math.max(6,Math.round(p.count/(sk.top5[0].count||1)*100));
+      var cols=['#2563eb','#7c3aed','#0891b2','#16a34a','#d97706'];
+      return'<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px">'+
+        '<span style="color:var(--txt)">'+escH(p.nom.length>22?p.nom.substring(0,22)+'…':p.nom)+'</span>'+
+        '<span style="font-weight:700;color:'+cols[i%5]+'">'+p.count+'×</span></div>'+
+        '<div style="background:var(--bg2);border-radius:4px;height:7px"><div style="background:'+cols[i%5]+';height:7px;border-radius:4px;width:'+w+'%"></div></div></div>';
+    }).join(''):'<div style="color:var(--txt3);font-size:11px;text-align:center;padding:12px">Aucune pièce utilisée.</div>';
+    var catMap={};st.forEach(function(s){if(!catMap[s.categorie])catMap[s.categorie]={cnt:0,val:0};catMap[s.categorie].cnt++;catMap[s.categorie].val+=s.qte*s.prix;});
+    var catArr=Object.keys(catMap).map(function(k){return{cat:k,cnt:catMap[k].cnt,val:catMap[k].val};}).sort(function(a,b){return b.val-a.val;});
+    var maxVal=Math.max.apply(null,[1].concat(catArr.map(function(c){return c.val;})));
+    var catBars=catArr.map(function(c){
+      var cs=getCat(c.cat);var w=Math.round(c.val/maxVal*100)||2;
+      return'<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px">'+
+        '<span>'+cs.icon+' '+escH(c.cat)+'</span><span style="color:var(--txt2)">'+c.cnt+' réf. — '+eur(c.val)+'</span></div>'+
+        '<div style="background:var(--bg2);border-radius:4px;height:7px"><div style="background:'+cs.color+';height:7px;border-radius:4px;width:'+w+'%"></div></div></div>';
+    }).join('');
+    kpiTab=
+      '<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:16px">'+
+        '<div style="background:var(--bg1);border:1px solid var(--bdr);border-radius:var(--rl);padding:16px;position:relative;overflow:hidden">'+
+          '<div style="position:absolute;top:0;left:0;right:0;height:2px;background:#2563eb"></div>'+
+          '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt2);margin-bottom:8px">Références</div>'+
+          '<div style="font-size:34px;font-weight:800;color:var(--txt);line-height:1">'+tot+'</div>'+
+          '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bdr);font-size:10px;color:var(--txt2)">'+nOk+' en stock normal</div>'+
+        '</div>'+
+        '<div style="background:var(--bg1);border:1px solid var(--bdr);border-radius:var(--rl);padding:16px;position:relative;overflow:hidden">'+
+          '<div style="position:absolute;top:0;left:0;right:0;height:2px;background:'+cr+'"></div>'+
+          '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt2);margin-bottom:8px">Taux rupture</div>'+
+          '<div style="font-size:34px;font-weight:800;color:'+cr+';line-height:1">'+sk.tauxRupture+'<span style="font-size:16px;font-weight:600">%</span></div>'+
+          '<div style="margin-top:8px;background:var(--bg2);border-radius:2px;height:3px"><div style="background:'+cr+';height:3px;border-radius:2px;width:'+Math.min(100,sk.tauxRupture)+'%"></div></div>'+
+          '<div style="margin-top:6px;font-size:10px;color:var(--txt2)">'+sk.rupture+' rupture · '+sk.alerte+' alerte</div>'+
+        '</div>'+
+        '<div style="background:var(--bg1);border:1px solid var(--bdr);border-radius:var(--rl);padding:16px;position:relative;overflow:hidden">'+
+          '<div style="position:absolute;top:0;left:0;right:0;height:2px;background:#16a34a"></div>'+
+          '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt2);margin-bottom:8px">Valeur stock</div>'+
+          '<div style="font-size:22px;font-weight:800;color:#16a34a;line-height:1">'+eur(sk.valeur)+'</div>'+
+          '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bdr);font-size:10px;color:var(--txt2)">'+tot+' références valorisées</div>'+
+        '</div>'+
+        '<div style="background:var(--bg1);border:1px solid var(--bdr);border-radius:var(--rl);padding:16px;position:relative;overflow:hidden">'+
+          '<div style="position:absolute;top:0;left:0;right:0;height:2px;background:#d97706"></div>'+
+          '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt2);margin-bottom:8px">Délai réappro. moy.</div>'+
+          '<div style="font-size:34px;font-weight:800;color:#d97706;line-height:1">'+sk.avgDelai+'<span style="font-size:14px;font-weight:600"> j.</span></div>'+
+          '<div style="display:flex;gap:2px;margin-top:8px">'+ [2,5,7,14,21].map(function(d){return'<div style="flex:1;height:3px;border-radius:2px;background:'+(sk.avgDelai<=d?'#d97706':'var(--bg2)')+';"></div>';}).join('')+'</div>'+
+          '<div style="margin-top:6px;font-size:10px;color:var(--txt2)">'+sk.nbCmds+' commandes passées</div>'+
+        '</div>'+
+        '<div style="background:var(--bg1);border:1px solid var(--bdr);border-radius:var(--rl);padding:16px;position:relative;overflow:hidden">'+
+          '<div style="position:absolute;top:0;left:0;right:0;height:2px;background:'+gCol+'"></div>'+
+          '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--txt2);margin-bottom:8px">Disponibilité</div>'+
+          '<div style="font-size:34px;font-weight:800;color:'+gCol+';line-height:1">'+sk.tauxDispo+'<span style="font-size:16px;font-weight:600">%</span></div>'+
+          '<div style="margin-top:8px;background:var(--bg2);border-radius:2px;height:3px"><div style="background:'+gCol+';height:3px;border-radius:2px;width:'+sk.tauxDispo+'%"></div></div>'+
+          '<div style="margin-top:6px;font-size:10px;color:var(--txt2)">'+(sk.interBloquees?sk.interBloquees+' interv. bloquée(s)':'Toutes disponibles')+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">'+
+        '<div class="card" style="padding:14px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--txt2);margin-bottom:10px;text-align:center">État du stock</div>'+donut+'</div>'+
+        '<div class="card" style="padding:14px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--txt2);margin-bottom:6px;text-align:center">Disponibilité pièces</div>'+jauge+'</div>'+
+        '<div class="card" style="padding:14px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--txt2);margin-bottom:6px;text-align:center">Taux de rupture</div>'+jaugeR+'</div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
+        '<div class="card" style="padding:14px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--txt2);margin-bottom:12px">Top pièces utilisées</div>'+barsTop+'</div>'+
+        '<div class="card" style="padding:14px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--txt2);margin-bottom:12px">Valeur par catégorie</div>'+catBars+'</div>'+
+      '</div>';
   }
   return '<div class="mtabs"><div class="mtab on" data-tab="stock-liste" onclick="switchTab(\'stock-liste\')">Liste</div><div class="mtab" data-tab="stock-kpi" onclick="switchTab(\'stock-kpi\')">KPIs</div></div>'+
     '<div id="tab-stock-liste" class="tab-pane show">'+listeTab+'</div>'+
     '<div id="tab-stock-kpi" class="tab-pane">'+kpiTab+'</div>';
 }
-/* ================================================================
-   SETTINGS
-================================================================ */
+
 function rSettings(){
   var userRows=USERS.map(function(u){
     var isAdmin=u.role==='admin';
