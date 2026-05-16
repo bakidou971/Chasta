@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -204,22 +205,25 @@ textarea.fi{resize:vertical;}
       <div class="ni" id="ni-historique" onclick="goPage('historique',this)"><span class="ni-dot"></span>Historique</div>
       <div class="ni" id="ni-planning" onclick="goPage('planning',this)"><span class="ni-dot"></span>Planning</div>
 
-      <div class="sb-sec">Références</div>
-      <div class="ni" id="ni-materiels" onclick="goPage('materiels',this)"><span class="ni-dot"></span>Matériels</div>
-      <div class="ni" id="ni-clients" onclick="goPage('clients',this)"><span class="ni-dot"></span>Clients</div>
-      <div class="ni" id="ni-techniciens" onclick="goPage('techniciens',this)"><span class="ni-dot"></span>Techniciens</div>
-      <div class="sb-sec">Stock</div>
-      <div class="ni" id="ni-stock" onclick="goPage('stock',this)"><span class="ni-dot"></span>Pièces détachées</div>
-      <div class="sb-sec">Administration</div>
-      <div class="ni" id="ni-settings" onclick="goPage('settings',this)"><span class="ni-dot"></span>Réglages</div>
-    </div>
-    <div class="sb-user">
-      <div class="av" id="sb-av">?</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="sb-name">—</div>
-        <div style="font-size:10px;color:var(--txt2);" id="sb-role">—</div>
-      </div>
-    </div>
+```
+  <div class="sb-sec">Références</div>
+  <div class="ni" id="ni-materiels" onclick="goPage('materiels',this)"><span class="ni-dot"></span>Matériels</div>
+  <div class="ni" id="ni-clients" onclick="goPage('clients',this)"><span class="ni-dot"></span>Clients</div>
+  <div class="ni" id="ni-techniciens" onclick="goPage('techniciens',this)"><span class="ni-dot"></span>Techniciens</div>
+  <div class="sb-sec">Stock</div>
+  <div class="ni" id="ni-stock" onclick="goPage('stock',this)"><span class="ni-dot"></span>Pièces détachées</div>
+  <div class="sb-sec">Administration</div>
+  <div class="ni" id="ni-settings" onclick="goPage('settings',this)"><span class="ni-dot"></span>Réglages</div>
+</div>
+<div class="sb-user">
+  <div class="av" id="sb-av">?</div>
+  <div style="flex:1;min-width:0;">
+    <div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="sb-name">—</div>
+    <div style="font-size:10px;color:var(--txt2);" id="sb-role">—</div>
+  </div>
+</div>
+```
+
   </div>
   <div class="main">
     <div class="topbar">
@@ -234,6 +238,7 @@ textarea.fi{resize:vertical;}
 </div>
 
 <!-- MODAL -->
+
 <div class="ov" id="ov" onclick="bgClose(event)">
   <div class="modal" id="modal">
     <div class="mh"><span class="mh-t" id="mtitle"></span><button class="mx" onclick="closeModal()">×</button></div>
@@ -504,7 +509,7 @@ function calcKPIs(period){
     var ca=hist.filter(function(i){return i.date_cloture&&i.date_cloture.startsWith(ks);}).reduce(function(a,i){return a+dvCA(i);},0);
     monthly.push({label:String(dt.getMonth()+1)+'/'+String(dt.getFullYear()).slice(2),cnt:cnt,ca:Math.round(ca)});
   }
-  return{mttr:mttr,avgTime:avgTime,overdue:overdue,topMachines:topMachines,totalCA:Math.round(totalCA),tauxA:tauxA,byTech:byTech,byStat:byStat,monthly:monthly,totalHist:hist.length,totalInter:D.interventions.length,histP:histP,done:done};
+  return{mttr:mttr,avgTime:avgTime,overdue:overdue,topMachines:topMachines,totalCA:Math.round(totalCA),tauxA:tauxA,byTech:byTech,byStat:byStat,monthly:monthly,totalHist:hist.length,totalInter:D.interventions.length,histP:histP,done:done,nbAcceptes:acc.length,nbDevis:avecDv.length};
 }
 
 /* ================================================================
@@ -935,117 +940,194 @@ function rPlanning(){
 function rAnalytics(){
   var p=ANALYTICS_PERIOD;
   var k=calcKPIs(p);
+  var all=(D.historique||[]).concat(D.interventions||[]);
+  var hist=D.historique||[];
   var pTabs='<div class="period-tabs">'+
-    ['month','quarter','year','all'].map(function(x){var l={month:'Ce mois',quarter:'Ce trimestre',year:'Cette année',all:'Tout'};return'<div class="ptab'+(p===x?' on':'')+'" onclick="ANALYTICS_PERIOD=\''+x+'\';draw(\'analytics\',\'\')">'+l[x]+'</div>';}).join('')+
+    ['month','quarter','year','all'].map(function(x){var l={month:'Ce mois',quarter:'Ce trimestre',year:'Cette année',all:'Tout'};return'<div class="ptab'+(p===x?' on':'')+'\" onclick="ANALYTICS_PERIOD=\''+x+'\';draw(\'dashboard\',\'\')">'+l[x]+'</div>';}).join('')+
   '</div>';
-  /* Top machines */
-  var topMachHTML=k.topMachines.length?k.topMachines.map(function(m,i){
-    return'<tr><td style="font-weight:700;font-size:11px">'+(i+1)+'.</td><td style="font-weight:700">'+escH(m.article)+'</td><td style="color:var(--txt2);font-size:10px">'+escH(m.serie)+'</td><td>'+bdg('b-red',m.count+' interv.')+'</td></tr>';
-  }).join(''):'<tr><td colspan="4" style="color:var(--txt2);text-align:center;padding:14px">Aucune donnée</td></tr>';
-  /* CA bars monthly */
-  var maxCA=Math.max.apply(null,[1].concat(k.monthly.map(function(m){return m.ca;})));
-  var caBars=barChartH(k.monthly.map(function(m){return{label:m.label,value:m.ca};}),maxCA,['#16a34a']);
-  /* Closures bars monthly */
-  var maxC=Math.max.apply(null,[1].concat(k.monthly.map(function(m){return m.cnt;})));
-  var closureBars=barChartH(k.monthly.map(function(m){return{label:m.label,value:m.cnt};}),maxC,['#2563eb']);
-  /* Devis donut */
-  var donutDv=donutSVG([{pct:k.tauxA,color:'#16a34a'},{pct:100-k.tauxA,color:'#e4e3db'}],65,65,52,18,k.tauxA+'%','acceptés');
-  /* Interventions by statut donut */
-  var statSlices2=[{pct:k.byStat['En cours']||0,color:'#2563eb'},{pct:k.byStat['En attente']||0,color:'#d97706'},{pct:k.byStat['Devis fait']||0,color:'#7c3aed'}];
-  var donutStat=donutSVG(statSlices2,65,65,52,18,String(k.totalInter),'actives');
-  /* Tech perf table */
-  var techRows=D.techniciens.filter(function(t){return t.statut==='Actif';}).map(function(t){
-    var actives=D.interventions.filter(function(i){return i.technicien===t.nom;}).length;
-    var done=(D.historique||[]).filter(function(i){return i.technicien===t.nom&&i.statut==='Terminé';}).length;
-    var ca=(D.historique||[]).filter(function(i){return i.technicien===t.nom;}).reduce(function(a,i){return a+dvCA(i);},0);
-    var avgD=(D.historique||[]).filter(function(i){return i.technicien===t.nom&&i.statut==='Terminé'&&i.date_debut&&i.date_cloture;});
-    var mtt=avgD.length?Math.round(avgD.reduce(function(a,i){return a+calBetween(i.date_debut,i.date_cloture);},0)/avgD.length*10)/10:0;
-    return'<tr><td style="font-weight:700">'+escH(t.nom)+'</td><td>'+escH(t.fonction||t.specialite||'—')+'</td>'+
-      '<td style="text-align:center">'+actives+'</td>'+
-      '<td style="text-align:center">'+done+'</td>'+
-      '<td style="text-align:center">'+(mtt?mtt+'j':'—')+'</td>'+
-      '<td style="text-align:right;font-weight:700">'+(ca?eur(ca):'—')+'</td></tr>';
-  }).join('');
-  return pTabs+
-  '<div class="kg" style="grid-template-columns:repeat(4,minmax(0,1fr))">'+
-    '<div class="kp" style="border-left-color:var(--blue)"><div class="kp-l">Interventions actives</div><div class="kp-v">'+k.totalInter+'</div></div>'+
-    '<div class="kp" style="border-left-color:var(--red)"><div class="kp-l">En retard</div><div class="kp-v">'+k.overdue+'</div><div class="kp-s">échéance dépassée</div></div>'+
-    '<div class="kp" style="border-left-color:var(--amber)"><div class="kp-l">Temps moy. interv.</div><div class="kp-v">'+(k.avgTime||'—')+(k.avgTime?' j.':'')+'</div><div class="kp-s">jours calendaires</div></div>'+
-    '<div class="kp" style="border-left-color:var(--green)"><div class="kp-l">CA période</div><div class="kp-v">'+eur(k.totalCA)+'</div></div>'+
-  '</div>'+
-  '<div class="chart-grid-2">'+
-    '<div class="chart-box"><div class="chart-title">CA mensuel (€ TTC)</div>'+caBars+'</div>'+
-    '<div class="chart-box"><div class="chart-title">Clôtures mensuelles</div>'+closureBars+'</div>'+
-  '</div>'+
-  '<div class="chart-grid-2">'+
-    '<div class="chart-box"><div class="chart-title">Statuts interventions actives</div><div class="donut-wrap">'+donutStat+'<div class="donut-legend">'+
-      '<div class="dl-item"><div class="dl-dot" style="background:#2563eb"></div>En cours ('+(k.byStat['En cours']||0)+')</div>'+
-      '<div class="dl-item"><div class="dl-dot" style="background:#d97706"></div>En attente ('+(k.byStat['En attente']||0)+')</div>'+
-      '<div class="dl-item"><div class="dl-dot" style="background:#7c3aed"></div>Devis fait ('+(k.byStat['Devis fait']||0)+')</div>'+
-    '</div></div></div>'+
-    '<div class="chart-box"><div class="chart-title">Taux acceptation devis</div><div class="donut-wrap">'+donutDv+'<div class="donut-legend"><div class="dl-item"><div class="dl-dot" style="background:#16a34a"></div>Acceptés ('+k.tauxA+'%)</div><div class="dl-item"><div class="dl-dot" style="background:#e4e3db"></div>Autres ('+(100-k.tauxA)+'%)</div></div></div></div>'+
-  '</div>'+
-  '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px">'+
-    '<div class="card"><div class="ch"><span class="ct2">Top machines en panne (historique)</span></div>'+
-      '<table class="tbl"><thead><tr><th>#</th><th>Article</th><th>N° Série</th><th>Interventions</th></tr></thead><tbody>'+topMachHTML+'</tbody></table>'+
+  /* KPI cards — design unique : grandes stats avec barres de progression */
+  var prevInter=k.totalInter+Math.floor(Math.random()*0); /* on utilise les vraies données */
+  var tauxRetard=k.totalInter?Math.round(k.overdue/k.totalInter*100):0;
+  var kpis='<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:12px">'+
+    /* Card 1 - Interventions avec anneau */
+    '<div style="background:var(--bg1);border-radius:var(--rl);padding:16px;border:1px solid var(--bdr);display:flex;align-items:center;gap:12px">'+
+      '<div style="position:relative;width:52px;height:52px;flex-shrink:0">'+
+        '<svg viewBox="0 0 52 52" width="52" height="52">'+
+          '<circle cx="26" cy="26" r="22" fill="none" stroke="var(--bg2)" stroke-width="5"/>'+
+          '<circle cx="26" cy="26" r="22" fill="none" stroke="#2563eb" stroke-width="5" stroke-dasharray="138" stroke-dashoffset="'+(138-Math.min(138,k.totalInter*4))+'" stroke-linecap="round" transform="rotate(-90 26 26)"/>'+
+          '<text x="26" y="30" font-size="12" font-weight="800" fill="var(--txt)" text-anchor="middle">'+k.totalInter+'</text>'+
+        '</svg>'+
+      '</div>'+
+      '<div><div style="font-size:11px;color:var(--txt2);font-weight:600">Interventions actives</div>'+
+      '<div style="font-size:18px;font-weight:800;color:#2563eb">'+k.totalInter+'</div>'+
+      '<div style="font-size:10px;color:var(--txt3)">'+k.totalHist+' archivées</div></div>'+
     '</div>'+
-    '<div class="card"><div class="ch"><span class="ct2">Performance techniciens</span></div>'+
-      '<div class="tw"><table class="tbl"><thead><tr><th>Nom</th><th>Fonction</th><th style="text-align:center">Actives</th><th style="text-align:center">Terminées</th><th style="text-align:center">Moy. durée</th><th style="text-align:right">CA généré</th></tr></thead><tbody>'+techRows+'</tbody></table></div>'+
+    /* Card 2 - En retard avec barre rouge */
+    '<div style="background:var(--bg1);border-radius:var(--rl);padding:16px;border:1px solid var(--bdr)">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
+        '<div style="font-size:11px;color:var(--txt2);font-weight:600">En retard</div>'+
+        '<div style="background:var(--redbg);color:var(--redtxt);font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px">'+tauxRetard+'% du parc</div>'+
+      '</div>'+
+      '<div style="font-size:32px;font-weight:800;color:'+(k.overdue>0?'var(--red)':'var(--greentxt)')+';line-height:1.1;margin:4px 0">'+k.overdue+'</div>'+
+      '<div style="background:var(--bg2);border-radius:3px;height:4px;margin-top:4px">'+
+        '<div style="background:var(--red);height:4px;border-radius:3px;width:'+Math.min(100,tauxRetard)+'%"></div>'+
+      '</div>'+
     '</div>'+
-+(function(){
-  var sk=calcStockKPIs();var st=D.stock||[];if(!st.length)return '';
-  var nOk2=st.filter(function(s){return s.qte>s.qte_min;}).length;
-  var gP=sk.tauxDispo/100;var gCol2=gP>=0.8?'#16A34A':gP>=0.6?'#D97706':'#DC2626';
-  var cr2=sk.rupture>0?'var(--red)':'var(--greentxt)';var tot2=st.length||1;
-  var deg2=0,arcs2='';
-  [{n:nOk2,c:'#16A34A'},{n:sk.alerte,c:'#D97706'},{n:sk.rupture,c:'#DC2626'}].forEach(function(sl){
-    if(!sl.n)return;var d=sl.n/tot2*360;if(d>=360)d=359.99;
-    var s2=deg2*Math.PI/180,e2=(deg2+d)*Math.PI/180;
-    var x1=40+34*Math.cos(s2-Math.PI/2),y1=40+34*Math.sin(s2-Math.PI/2);
-    var x2=40+34*Math.cos(e2-Math.PI/2),y2=40+34*Math.sin(e2-Math.PI/2);
-    arcs2+='<path d="M40,40 L'+x1+','+y1+' A34,34 0 '+(d>180?1:0)+',1 '+x2+','+y2+' Z" fill="'+sl.c+'"/>';
-    deg2+=d;
+    /* Card 3 - Temps moyen avec icône chrono */
+    '<div style="background:var(--bg1);border-radius:var(--rl);padding:16px;border:1px solid var(--bdr)">'+
+      '<div style="font-size:11px;color:var(--txt2);font-weight:600;margin-bottom:4px">Durée moy. intervention</div>'+
+      '<div style="display:flex;align-items:baseline;gap:4px">'+
+        '<div style="font-size:32px;font-weight:800;color:#d97706;line-height:1.1">'+(k.avgTime||'—')+'</div>'+
+        (k.avgTime?'<div style="font-size:12px;color:var(--txt2);font-weight:600">jours</div>':'')+
+      '</div>'+
+      '<div style="font-size:10px;color:var(--txt3);margin-top:6px">calendaires • clôtures archivées</div>'+
+      '<div style="display:flex;gap:2px;margin-top:8px">'+
+        [3,5,7,10,14].map(function(d){var active=k.avgTime&&k.avgTime<=d;return'<div style="flex:1;height:4px;border-radius:2px;background:'+(active?'#d97706':'var(--bg2)')+'"></div>';}).join('')+
+      '</div>'+
+    '</div>'+
+    /* Card 4 - CA avec tendance */
+    '<div style="background:linear-gradient(135deg,#16a34a08,#16a34a18);border-radius:var(--rl);padding:16px;border:1px solid #16a34a33">'+
+      '<div style="font-size:11px;color:var(--greentxt);font-weight:600;margin-bottom:4px">CA période</div>'+
+      '<div style="font-size:22px;font-weight:800;color:var(--greentxt)">'+eur(k.totalCA)+'</div>'+
+      '<div style="font-size:10px;color:var(--txt3);margin-top:2px">devis acceptés uniquement</div>'+
+      '<div style="margin-top:8px;font-size:10px;color:var(--greentxt);font-weight:600">'+k.totalHist+' interventions archivées</div>'+
+    '</div>'+
+  '</div>';
+  /* Jauge taux acceptation - design demi-cercle unique */
+  var gAng=180*k.tauxA/100;var gR=38;var gCx=50;var gCy=44;
+  var gFull=180-gAng;
+  var gpx=gCx+gR*Math.cos(gFull*Math.PI/180),gpy=gCy-gR*Math.sin(gFull*Math.PI/180);
+  var gColor=k.tauxA>=70?'#16a34a':k.tauxA>=40?'#d97706':'#dc2626';
+  var jaugeDv='<div style="text-align:center;padding:8px 0">'+
+    '<svg viewBox="0 0 100 52" width="140" height="70" style="display:block;margin:0 auto">'+
+      '<path d="M'+(gCx-gR)+','+gCy+' A'+gR+','+gR+' 0 0,1 '+(gCx+gR)+','+gCy+'" fill="none" stroke="#e4e3db" stroke-width="10" stroke-linecap="round"/>'+
+      (k.tauxA>0?'<path d="M'+(gCx-gR)+','+gCy+' A'+gR+','+gR+' 0 '+(gAng>90?1:0)+',1 '+gpx+','+gpy+'" fill="none" stroke="'+gColor+'" stroke-width="10" stroke-linecap="round"/>':'')+
+      '<text x="'+gCx+'" y="'+(gCy-4)+'" font-size="14" font-weight="800" fill="'+gColor+'" text-anchor="middle">'+k.tauxA+'%</text>'+
+      '<text x="'+gCx+'" y="'+(gCy+10)+'" font-size="7" fill="var(--txt2)" text-anchor="middle">taux acceptation</text>'+
+      '<text x="'+(gCx-gR-2)+'" y="'+(gCy+14)+'" font-size="7" fill="var(--txt3)" text-anchor="middle">0%</text>'+
+      '<text x="'+(gCx+gR+2)+'" y="'+(gCy+14)+'" font-size="7" fill="var(--txt3)" text-anchor="middle">100%</text>'+
+    '</svg>'+
+    '<div style="font-size:10px;color:var(--txt2)">'+k.nbAcceptes+' acceptés / '+k.nbDevis+' devis</div>'+
+  '</div>';
+  /* Évolution CA 12 mois */
+  var now=new Date();
+  var months12=[];
+  for(var mi=11;mi>=0;mi--){var d=new Date(now.getFullYear(),now.getMonth()-mi,1);months12.push({year:d.getFullYear(),month:d.getMonth(),label:['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'][d.getMonth()],ca:0,cnt:0});}
+  hist.forEach(function(i){
+    if(!i.date_cloture)return;
+    var d=new Date(i.date_cloture);
+    var m=months12.find(function(x){return x.year===d.getFullYear()&&x.month===d.getMonth();});
+    if(m){m.ca+=dvCA(i)||0;m.cnt++;}
   });
-  var donutA='<svg viewBox="0 0 80 80" width="68" height="68" style="display:block;flex-shrink:0">'+arcs2+'<circle cx="40" cy="40" r="20" fill="var(--bg)"/><text x="40" y="44" font-size="11" font-weight="bold" fill="var(--txt)" text-anchor="middle">'+tot2+'</text></svg>';
-  var gR2=32,gCx2=46,gCy2=40,gAng2=180*gP,gFull2=180-gAng2;
-  var gpx2=gCx2+gR2*Math.cos(gFull2*Math.PI/180),gpy2=gCy2-gR2*Math.sin(gFull2*Math.PI/180);
-  var jaugeA='<svg viewBox="0 0 92 52" width="88" height="52" style="display:block;margin:0 auto">'+
-    '<path d="M'+(gCx2-gR2)+','+gCy2+' A'+gR2+','+gR2+' 0 0,1 '+(gCx2+gR2)+','+gCy2+'" fill="none" stroke="#E5E7EB" stroke-width="8" stroke-linecap="round"/>'+
-    '<path d="M'+(gCx2-gR2)+','+gCy2+' A'+gR2+','+gR2+' 0 '+(gAng2>90?1:0)+',1 '+gpx2+','+gpy2+'" fill="none" stroke="'+gCol2+'" stroke-width="8" stroke-linecap="round"/>'+
-    '<text x="'+gCx2+'" y="'+(gCy2-2)+'" font-size="13" font-weight="bold" fill="'+gCol2+'" text-anchor="middle">'+sk.tauxDispo+'%</text>'+
-    '<text x="'+gCx2+'" y="'+(gCy2+12)+'" font-size="7" fill="var(--txt2)" text-anchor="middle">disponibilité</text></svg>';
-  var barsA=sk.top5.length?sk.top5.map(function(p,i){
-    var w=Math.max(6,Math.round(p.count/(sk.top5[0].count||1)*100));
-    var cols=['#2563EB','#7C3AED','#0891B2','#16A34A','#D97706'];
-    return'<div style="margin-bottom:5px"><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--txt2);margin-bottom:2px"><span>'+escH(p.nom.length>18?p.nom.substring(0,18)+'…':p.nom)+'</span><span style="font-weight:700;color:var(--blue)">'+p.count+'×</span></div>'+
-      '<div style="background:var(--bg2);border-radius:3px;height:6px"><div style="background:'+cols[i%5]+';height:6px;border-radius:3px;width:'+w+'%"></div></div></div>';
-  }).join(''):'<div style="color:var(--txt3);font-size:11px">Aucune pièce utilisée.</div>';
-  return '<div class="card" style="margin-top:16px">'+
-    '<div class="ch"><span class="ct2">Pièces Détachées — Analytique</span></div>'+
-    '<div class="kg" style="grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:12px">'+
-      '<div class="kp" style="border-left-color:var(--red)"><div class="kp-l">Taux rupture</div><div class="kp-v" style="color:'+cr2+'">'+sk.tauxRupture+'%</div><div class="kp-s">'+sk.rupture+' rupture — '+sk.alerte+' alerte</div></div>'+
-      '<div class="kp" style="border-left-color:var(--blue)"><div class="kp-l">Valeur stock</div><div class="kp-v">'+eur(sk.valeur)+'</div><div class="kp-s">'+tot2+' réf.</div></div>'+
-      '<div class="kp" style="border-left-color:var(--amber)"><div class="kp-l">Délai réappro.</div><div class="kp-v">'+sk.avgDelai+' j.</div><div class="kp-s">'+sk.nbCmds+' cmd.</div></div>'+
-      '<div class="kp" style="border-left-color:var(--greentxt)"><div class="kp-l">Dispo. pièces</div><div class="kp-v" style="color:'+gCol2+'">'+sk.tauxDispo+'%</div><div class="kp-s">'+(sk.interBloquees?sk.interBloquees+' bloquée(s)':'Toutes dispo.')+'</div></div>'+
+  var maxCA=Math.max.apply(null,[1].concat(months12.map(function(m){return m.ca;})));
+  var caEvol='<div style="display:flex;align-items:flex-end;gap:4px;height:90px;padding:8px 0">'+
+    months12.map(function(m){
+      var h=Math.max(4,Math.round(m.ca/maxCA*70));
+      return'<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">'+
+        (m.ca?'<div style="font-size:7px;color:var(--txt2);writing-mode:vertical-rl;transform:rotate(180deg)">'+eur(m.ca)+'</div>':'<div style="font-size:7px">&nbsp;</div>')+
+        '<div style="width:100%;background:#16a34a;border-radius:3px 3px 0 0;height:'+h+'px"></div>'+
+        '<div style="font-size:8px;color:var(--txt3)">'+m.label+'</div>'+
+      '</div>';
+    }).join('')+
+  '</div>';
+  /* Par technicien */
+  var techData=D.techniciens.filter(function(t){return t.statut==='Actif';}).map(function(t){
+    var actives=D.interventions.filter(function(i){return i.technicien===t.nom;}).length;
+    var done=hist.filter(function(i){return i.technicien===t.nom&&i.statut==='Terminé';}).length;
+    var ca=hist.filter(function(i){return i.technicien===t.nom;}).reduce(function(a,i){return a+dvCA(i);},0);
+    var avgD=hist.filter(function(i){return i.technicien===t.nom&&i.date_debut&&i.date_cloture;});
+    var mtt=avgD.length?Math.round(avgD.reduce(function(a,i){return a+calBetween(i.date_debut,i.date_cloture);},0)/avgD.length*10)/10:0;
+    var total=actives+done;var tauxClo=total?Math.round(done/total*100):0;
+    return{nom:t.nom,fonction:t.fonction||t.specialite||'—',actives:actives,done:done,ca:ca,mtt:mtt,tauxClo:tauxClo};
+  }).sort(function(a,b){return b.ca-a.ca;});
+  var maxTechCA=Math.max.apply(null,[1].concat(techData.map(function(t){return t.ca;})));
+  var techRows=techData.length?techData.map(function(t){
+    var bar=Math.round(t.ca/maxTechCA*100)||0;
+    var tcol=t.tauxClo>=80?'#16a34a':t.tauxClo>=50?'#d97706':'#dc2626';
+    return'<tr><td style="font-weight:700">'+escH(t.nom)+'</td>'+
+      '<td style="color:var(--txt2);font-size:10px">'+escH(t.fonction)+'</td>'+
+      '<td style="text-align:center">'+t.actives+'</td><td style="text-align:center">'+t.done+'</td>'+
+      '<td style="text-align:center;color:'+tcol+';font-weight:700">'+t.tauxClo+'%</td>'+
+      '<td style="text-align:center">'+(t.mtt?t.mtt+'j':'—')+'</td>'+
+      '<td style="min-width:70px"><div style="background:var(--bg2);border-radius:3px;height:5px"><div style="background:#16a34a;height:5px;border-radius:3px;width:'+bar+'%"></div></div></td>'+
+      '<td style="text-align:right;font-weight:700">'+(t.ca?eur(t.ca):'—')+'</td></tr>';
+  }).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--txt2);padding:14px">Aucun technicien actif</td></tr>';
+  /* Par client */
+  var cliMap={};
+  all.forEach(function(i){
+    if(!i.client)return;
+    if(!cliMap[i.client])cliMap[i.client]={nom:i.client,cnt:0,ca:0,marques:{}};
+    cliMap[i.client].cnt++;cliMap[i.client].ca+=dvCA(i)||0;
+    if(i.marque)cliMap[i.client].marques[i.marque]=(cliMap[i.client].marques[i.marque]||0)+1;
+  });
+  var cliData=Object.values(cliMap).sort(function(a,b){return b.cnt-a.cnt;}).slice(0,10);
+  var maxCliCnt=Math.max.apply(null,[1].concat(cliData.map(function(c){return c.cnt;})));
+  var cliRows=cliData.length?cliData.map(function(c){
+    var bar=Math.round(c.cnt/maxCliCnt*100)||0;
+    var topMarq=Object.keys(c.marques).sort(function(a,b){return c.marques[b]-c.marques[a];})[0]||'—';
+    return'<tr><td style="font-weight:700">'+escH(c.nom)+'</td>'+
+      '<td style="text-align:center">'+c.cnt+'</td>'+
+      '<td style="color:var(--txt2);font-size:10px">'+escH(topMarq)+'</td>'+
+      '<td style="min-width:70px"><div style="background:var(--bg2);border-radius:3px;height:5px"><div style="background:#2563eb;height:5px;border-radius:3px;width:'+bar+'%"></div></div></td>'+
+      '<td style="text-align:right;font-weight:700">'+(c.ca?eur(c.ca):'—')+'</td></tr>';
+  }).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--txt2);padding:14px">Aucune donnée</td></tr>';
+  /* Par marque */
+  var marqMap={};
+  all.forEach(function(i){
+    if(!i.marque)return;
+    if(!marqMap[i.marque])marqMap[i.marque]={marque:i.marque,cnt:0,ca:0,durees:[]};
+    marqMap[i.marque].cnt++;marqMap[i.marque].ca+=dvCA(i)||0;
+    if(i.date_debut&&i.date_cloture)marqMap[i.marque].durees.push(calBetween(i.date_debut,i.date_cloture));
+  });
+  var marqData=Object.values(marqMap).sort(function(a,b){return b.cnt-a.cnt;}).slice(0,10);
+  var maxMarqCnt=Math.max.apply(null,[1].concat(marqData.map(function(m){return m.cnt;})));
+  var marqRows=marqData.length?marqData.map(function(m){
+    var bar=Math.round(m.cnt/maxMarqCnt*100)||0;
+    var mtt=m.durees.length?Math.round(m.durees.reduce(function(a,b){return a+b;},0)/m.durees.length*10)/10:0;
+    return'<tr><td style="font-weight:700">'+escH(m.marque)+'</td>'+
+      '<td style="text-align:center">'+m.cnt+'</td>'+
+      '<td style="text-align:center">'+(mtt?mtt+'j':'—')+'</td>'+
+      '<td style="min-width:70px"><div style="background:var(--bg2);border-radius:3px;height:5px"><div style="background:#7c3aed;height:5px;border-radius:3px;width:'+bar+'%"></div></div></td>'+
+      '<td style="text-align:right;font-weight:700">'+(m.ca?eur(m.ca):'—')+'</td></tr>';
+  }).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--txt2);padding:14px">Aucune donnée</td></tr>';
+  /* Récurrence pannes */
+  var recMap={};
+  all.forEach(function(i){
+    var rk=i.serie||i.article;if(!rk)return;
+    if(!recMap[rk])recMap[rk]={article:i.article,serie:i.serie,client:i.client,cnt:0};
+    recMap[rk].cnt++;
+  });
+  var recData=Object.values(recMap).filter(function(r){return r.cnt>=2;}).sort(function(a,b){return b.cnt-a.cnt;}).slice(0,10);
+  var recRows=recData.length?recData.map(function(r){
+    var col=r.cnt>=5?'b-red':r.cnt>=3?'b-amber':'b-orange';
+    return'<tr><td style="font-weight:700">'+escH(r.article)+'</td>'+
+      '<td style="color:var(--txt2);font-size:10px;font-family:monospace">'+escH(r.serie||'—')+'</td>'+
+      '<td>'+escH(r.client||'—')+'</td>'+
+      '<td>'+bdg(col,r.cnt+' pannes')+'</td></tr>';
+  }).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--txt2);padding:14px">Aucune récurrence détectée ✓</td></tr>';
+
+  return pTabs+kpis+
+  '<div class="chart-grid-2" style="margin-top:12px">'+
+    '<div class="chart-box"><div class="chart-title">Évolution CA sur 12 mois</div>'+caEvol+'</div>'+
+    '<div class="chart-box"><div class="chart-title">Taux acceptation devis</div>'+jaugeDv+'</div>'+
+  '</div>'+
+  '<div class="card" style="margin-top:12px"><div class="ch"><span class="ct2">Performance par technicien</span></div>'+
+    '<div class="tw"><table class="tbl"><thead><tr><th>Nom</th><th>Fonction</th><th style="text-align:center">Actives</th><th style="text-align:center">Terminées</th><th style="text-align:center">Taux clôture</th><th style="text-align:center">Durée moy.</th><th>CA rel.</th><th style="text-align:right">CA généré</th></tr></thead><tbody>'+techRows+'</tbody></table></div>'+
+  '</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">'+
+    '<div class="card"><div class="ch"><span class="ct2">Top clients</span><span class="cc">par nb interventions</span></div>'+
+      '<div class="tw"><table class="tbl"><thead><tr><th>Client</th><th style="text-align:center">Interv.</th><th>Marque princ.</th><th>Vol. rel.</th><th style="text-align:right">CA</th></tr></thead><tbody>'+cliRows+'</tbody></table></div>'+
     '</div>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">'+
-      '<div class="card" style="padding:12px"><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--txt2);margin-bottom:8px">État stock</div>'+
-        '<div style="display:flex;align-items:center;gap:8px">'+donutA+
-          '<div style="font-size:10px;line-height:1.8"><div><span style="color:#16A34A;font-weight:700">●</span> OK : '+nOk2+'</div>'+
-          (sk.alerte?'<div><span style="color:#D97706;font-weight:700">●</span> Alerte : '+sk.alerte+'</div>':'')+
-          (sk.rupture?'<div><span style="color:#DC2626;font-weight:700">●</span> Rupture : '+sk.rupture+'</div>':'')+
-          '</div></div></div>'+
-      '<div class="card" style="padding:12px"><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--txt2);margin-bottom:4px">Taux disponibilité</div>'+
-        jaugeA+'</div>'+
-      '<div class="card" style="padding:12px"><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--txt2);margin-bottom:8px">Top pièces</div>'+
-        barsA+'</div>'+
-    '</div></div>';
-})()+'</div>';
+    '<div class="card"><div class="ch"><span class="ct2">Pannes par marque</span><span class="cc">temps moyen réparation</span></div>'+
+      '<div class="tw"><table class="tbl"><thead><tr><th>Marque</th><th style="text-align:center">Pannes</th><th style="text-align:center">Durée moy.</th><th>Vol. rel.</th><th style="text-align:right">CA</th></tr></thead><tbody>'+marqRows+'</tbody></table></div>'+
+    '</div>'+
+  '</div>'+
+  '<div class="card" style="margin-top:12px"><div class="ch"><span class="ct2">Récurrence des pannes</span><span class="cc">machines avec 2+ interventions</span></div>'+
+    '<div class="tw"><table class="tbl"><thead><tr><th>Article</th><th>N° Série</th><th>Client</th><th>Fréquence</th></tr></thead><tbody>'+recRows+'</tbody></table></div>'+
+  '</div>';
 }
 
-/* ================================================================
-   MATERIELS
-================================================================ */
+
 function rMat(f){
   var vgpR=getVGPRelances();var vrMap={};vgpR.forEach(function(v){vrMap[v.inter.serie]={daysLeft:v.daysLeft,calDays:v.calDays,date:v.relanceDate};});
   var clients=uniq(D.materiels.map(function(m){return m.client;}).filter(Boolean));
@@ -1454,164 +1536,165 @@ function mInter(id){
   '</div>'+
   '<div class="fg"><label class="fl">Statut</label><select class="fi" id="fstat">'+opts(SI,d.statut)+'</select></div>'+
   '<div class="fg"><label class="fl">Description / diagnostic</label><textarea class="fi" id="fdesc" rows="3">'+(d.description||'')+'</textarea></div>'+
-  '<div class="fg"><label class="fl">Pièces remplacées</label>'+
-    '<div class="ptags" id="ptags">'+renderPTags()+'</div>'+
-    '<div style="display:flex;gap:6px">'+
-      '<div class="acw" style="flex:1"><input class="fi" id="fpiece-in" placeholder="Saisir ou choisir…"><div class="acd" id="fpiece-drop"></div></div>'+
-      '<button class="bp" onclick="addPieceInput()" style="padding:7px 11px;font-size:11px">+ Ajouter</button>'+
-    '</div></div>';
 
-  var tab2='<div class="fg2">'+
-    '<div class="fg"><label class="fl">Statut devis</label><select class="fi" id="dv-stat">'+opts(DV_STATS,dvS)+'</select></div>'+
-    '<div class="fg"><label class="fl">Date devis</label><input class="fi" type="date" id="dv-date" value="'+dvD+'"></div>'+
-  '</div>'+
-  '<div class="vgp-box"><input type="checkbox" id="dv-vgp" style="width:16px;height:16px;cursor:pointer" '+dvV+'> <label for="dv-vgp" style="font-size:12px;font-weight:600;color:var(--cyantxt);cursor:pointer">VGP effectuée — relance automatique à 6 mois</label></div>'+
-  '<div class="dv-sec"><div class="dv-sec-title">Pièces</div><div id="dvp-list">'+renderDvP()+'</div>'+
-    '<button class="bs" onclick="DV_P.push({desc:\'\',qte:1,pu:0});refreshDvP()" style="font-size:11px;margin-top:5px">+ Ajouter pièce</button></div>'+
-  '<div class="dv-sec"><div class="dv-sec-title">Main d\'œuvre</div><div id="dvm-list">'+renderDvMO()+'</div>'+
-    '<button class="bs" onclick="DV_MO.push({desc:\'M.O.\',technicien:\'\',heures:1,taux:65});refreshDvMO()" style="font-size:11px;margin-top:5px">+ Ajouter ligne M.O.</button></div>'+
-  '<div class="fg2" style="margin-top:5px"><div class="fg"><label class="fl">TVA (%)</label><input class="fi" type="number" id="dv-tva" value="'+dvT+'" step="0.1" style="width:90px" oninput="updateDvTot()"></div></div>'+
-  '<div id="dv-tot-zone">'+renderDvTot()+'</div>'+
-  '<div class="fg" style="margin-top:10px"><label class="fl">Notes</label><textarea class="fi" id="dv-notes" rows="2">'+escH(dvN)+'</textarea></div>';
+‘<div class="fg"><label class="fl">Pièces remplacées</label>’+
+‘<div class="ptags" id="ptags">’+renderPTags()+’</div>’+
+‘<div style="display:flex;gap:6px">’+
+‘<div class="acw" style="flex:1"><input class="fi" id="fpiece-in" placeholder="Saisir ou choisir…"><div class="acd" id="fpiece-drop"></div></div>’+
+‘<button class="bp" onclick="addPieceInput()" style="padding:7px 11px;font-size:11px">+ Ajouter</button>’+
+‘</div></div>’;
 
-  var body='<div class="mtabs"><div class="mtab on" data-tab="info" onclick="switchTab(\'info\')">Intervention'+idBadge+'</div><div class="mtab" data-tab="devis" onclick="switchTab(\'devis\')">Devis</div></div>'+
-    '<div id="tab-info" class="tab-pane show">'+tab1+'</div>'+
-    '<div id="tab-devis" class="tab-pane">'+tab2+'</div>';
+var tab2=’<div class="fg2">’+
+‘<div class="fg"><label class="fl">Statut devis</label><select class="fi" id="dv-stat">’+opts(DV_STATS,dvS)+’</select></div>’+
+‘<div class="fg"><label class="fl">Date devis</label><input class="fi" type="date" id="dv-date" value="'+dvD+'"></div>’+
+‘</div>’+
+‘<div class="vgp-box"><input type=“checkbox” id=“dv-vgp” style=“width:16px;height:16px;cursor:pointer” ‘+dvV+’> <label for="dv-vgp" style="font-size:12px;font-weight:600;color:var(--cyantxt);cursor:pointer">VGP effectuée — relance automatique à 6 mois</label></div>’+
+‘<div class="dv-sec"><div class="dv-sec-title">Pièces</div><div id="dvp-list">’+renderDvP()+’</div>’+
+‘<button class="bs" onclick="DV_P.push({desc:\'\',qte:1,pu:0});refreshDvP()" style="font-size:11px;margin-top:5px">+ Ajouter pièce</button></div>’+
+‘<div class="dv-sec"><div class="dv-sec-title">Main d'œuvre</div><div id="dvm-list">’+renderDvMO()+’</div>’+
+‘<button class="bs" onclick="DV_MO.push({desc:\'M.O.\',technicien:\'\',heures:1,taux:65});refreshDvMO()" style="font-size:11px;margin-top:5px">+ Ajouter ligne M.O.</button></div>’+
+‘<div class="fg2" style="margin-top:5px"><div class="fg"><label class="fl">TVA (%)</label><input class="fi" type="number" id="dv-tva" value="'+dvT+'" step="0.1" style="width:90px" oninput="updateDvTot()"></div></div>’+
+‘<div id="dv-tot-zone">’+renderDvTot()+’</div>’+
+‘<div class="fg" style="margin-top:10px"><label class="fl">Notes</label><textarea class="fi" id="dv-notes" rows="2">’+escH(dvN)+’</textarea></div>’;
 
-  openModal(id?'Modifier INT-'+String(id).padStart(4,'0'):'Nouvelle intervention',body,!!id);
-  makeAC('fart-in','fart-drop',articles,null);
-  makeAC('fserie-in','fserie-drop',series,function(s){var m=D.materiels.find(function(x){return x.serie===s;});if(m){var a=document.getElementById('fart-in');if(a)a.value=m.article;}});
-  makeAC('fpiece-in','fpiece-drop',stk,null);
-  document.getElementById('fpiece-in').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();addPieceInput();}});
+var body=’<div class="mtabs"><div class="mtab on" data-tab="info" onclick="switchTab(\'info\')">Intervention’+idBadge+’</div><div class="mtab" data-tab="devis" onclick="switchTab(\'devis\')">Devis</div></div>’+
+‘<div id="tab-info" class="tab-pane show">’+tab1+’</div>’+
+‘<div id="tab-devis" class="tab-pane">’+tab2+’</div>’;
+
+openModal(id?‘Modifier INT-’+String(id).padStart(4,‘0’):‘Nouvelle intervention’,body,!!id);
+makeAC(‘fart-in’,‘fart-drop’,articles,null);
+makeAC(‘fserie-in’,‘fserie-drop’,series,function(s){var m=D.materiels.find(function(x){return x.serie===s;});if(m){var a=document.getElementById(‘fart-in’);if(a)a.value=m.article;}});
+makeAC(‘fpiece-in’,‘fpiece-drop’,stk,null);
+document.getElementById(‘fpiece-in’).addEventListener(‘keydown’,function(e){if(e.key===‘Enter’){e.preventDefault();addPieceInput();}});
 }
 function editInter(id){mInter(id);}
-function autoFin(){var deb=document.getElementById('fdeb');var fin=document.getElementById('dfin');if(deb&&fin&&deb.value)fin.value=addWorkdays(deb.value,10);}
+function autoFin(){var deb=document.getElementById(‘fdeb’);var fin=document.getElementById(‘dfin’);if(deb&&fin&&deb.value)fin.value=addWorkdays(deb.value,10);}
 
 /* ================================================================
-   OTHER MODALS
+OTHER MODALS
 ================================================================ */
 function mMat(id){
-  MODE='mat';EID=id||null;var d=id?D.materiels.find(function(x){return x.id===id;}):{};
-  var cO=D.clients.map(function(c){return'<option'+(d.client===c.nom?' selected':'')+' value="'+escH(c.nom)+'">'+escH(c.nom)+'</option>';}).join('');
-  var tO=D.techniciens.map(function(t){return'<option'+(d.technicien===t.nom?' selected':'')+' value="'+escH(t.nom)+'">'+escH(t.nom)+'</option>';}).join('');
-  var idB=id?'<span class="id-bdg">MAT-'+String(id).padStart(4,'0')+'</span>':'';
-  openModal((id?'Modifier matériel':'Nouveau matériel')+idB,
-    '<div class="fg2"><div class="fg"><label class="fl">Article</label><input class="fi" id="fart" value="'+escH(d.article||'')+'"></div>'+
-    '<div class="fg"><label class="fl">N° de série</label><input class="fi" id="fserie" value="'+escH(d.serie||'')+'"></div></div>'+
-    '<div class="fg2"><div class="fg"><label class="fl">Client</label><select class="fi" id="fcli">'+cO+'</select></div>'+
-    '<div class="fg"><label class="fl">Marque</label><select class="fi" id="fmarq">'+opts(MARQUES,d.marque)+'</select></div></div>'+
-    '<div class="fg"><label class="fl">Technicien</label><select class="fi" id="ftech"><option value="">Non assigné</option>'+tO+'</select></div>'+
-    '<div class="fg"><label class="fl">Localisation</label><select class="fi" id="floc">'+opts(ZONES,d.localisation)+'</select></div>',!!id);
+MODE=‘mat’;EID=id||null;var d=id?D.materiels.find(function(x){return x.id===id;}):{};
+var cO=D.clients.map(function(c){return’<option’+(d.client===c.nom?’ selected’:’’)+’ value=”’+escH(c.nom)+’”>’+escH(c.nom)+’</option>’;}).join(’’);
+var tO=D.techniciens.map(function(t){return’<option’+(d.technicien===t.nom?’ selected’:’’)+’ value=”’+escH(t.nom)+’”>’+escH(t.nom)+’</option>’;}).join(’’);
+var idB=id?’<span class="id-bdg">MAT-’+String(id).padStart(4,‘0’)+’</span>’:’’;
+openModal((id?‘Modifier matériel’:‘Nouveau matériel’)+idB,
+‘<div class="fg2"><div class="fg"><label class="fl">Article</label><input class="fi" id="fart" value="'+escH(d.article||'')+'"></div>’+
+‘<div class="fg"><label class="fl">N° de série</label><input class="fi" id="fserie" value="'+escH(d.serie||'')+'"></div></div>’+
+‘<div class="fg2"><div class="fg"><label class="fl">Client</label><select class="fi" id="fcli">’+cO+’</select></div>’+
+‘<div class="fg"><label class="fl">Marque</label><select class="fi" id="fmarq">’+opts(MARQUES,d.marque)+’</select></div></div>’+
+‘<div class="fg"><label class="fl">Technicien</label><select class="fi" id="ftech"><option value="">Non assigné</option>’+tO+’</select></div>’+
+‘<div class="fg"><label class="fl">Localisation</label><select class="fi" id="floc">’+opts(ZONES,d.localisation)+’</select></div>’,!!id);
 }
 function editMat(id){mMat(id);}
 
 function mCli(id){
-  MODE='cli';EID=id||null;var d=id?D.clients.find(function(x){return x.id===id;}):{};
-  openModal(id?'Modifier client':'Nouveau client',
-    '<div class="fg"><label class="fl">Nom</label><input class="fi" id="fnom" value="'+escH(d.nom||'')+'"></div>'+
-    '<div class="fg"><label class="fl">Contact</label><input class="fi" id="fcontact" value="'+escH(d.contact||'')+'"></div>'+
-    '<div class="fg2"><div class="fg"><label class="fl">Téléphone</label><input class="fi" id="ftel" value="'+escH(d.tel||'')+'"></div>'+
-    '<div class="fg"><label class="fl">Email</label><input class="fi" id="femail" type="email" value="'+escH(d.email||'')+'"></div></div>'+
-    '<div class="fg"><label class="fl">Adresse</label><input class="fi" id="fadr" value="'+escH(d.adresse||'')+'"></div>'+
-    '<div class="fg"><label class="fl">Notes</label><textarea class="fi" id="fnotes" rows="2">'+(d.notes||'')+'</textarea></div>',!!id);
+MODE=‘cli’;EID=id||null;var d=id?D.clients.find(function(x){return x.id===id;}):{};
+openModal(id?‘Modifier client’:‘Nouveau client’,
+‘<div class="fg"><label class="fl">Nom</label><input class="fi" id="fnom" value="'+escH(d.nom||'')+'"></div>’+
+‘<div class="fg"><label class="fl">Contact</label><input class="fi" id="fcontact" value="'+escH(d.contact||'')+'"></div>’+
+‘<div class="fg2"><div class="fg"><label class="fl">Téléphone</label><input class="fi" id="ftel" value="'+escH(d.tel||'')+'"></div>’+
+‘<div class="fg"><label class="fl">Email</label><input class="fi" id="femail" type="email" value="'+escH(d.email||'')+'"></div></div>’+
+‘<div class="fg"><label class="fl">Adresse</label><input class="fi" id="fadr" value="'+escH(d.adresse||'')+'"></div>’+
+‘<div class="fg"><label class="fl">Notes</label><textarea class="fi" id="fnotes" rows="2">’+(d.notes||’’)+’</textarea></div>’,!!id);
 }
 function editCli(id){mCli(id);}
 
 function mTech(id){
-  MODE='tech';EID=id||null;var d=id?D.techniciens.find(function(x){return x.id===id;}):{};
-  var curFonc=d.fonction||d.specialite||'';
-  openModal(id?'Modifier technicien':'Nouveau technicien',
-    '<div class="fg"><label class="fl">Nom complet</label><input class="fi" id="fnom" value="'+escH(d.nom||'')+'"></div>'+
-    '<div class="fg2">'+
-      '<div class="fg"><label class="fl">Fonction</label><select class="fi" id="ffonc">'+opts(FONCTIONS,curFonc)+'</select></div>'+
-      '<div class="fg"><label class="fl">Zone d\'intervention</label><select class="fi" id="fzone">'+opts(ZONES,d.zone)+'</select></div>'+
-    '</div>'+
-    '<div class="fg2"><div class="fg"><label class="fl">Téléphone</label><input class="fi" id="ftel" value="'+escH(d.tel||'')+'"></div>'+
-    '<div class="fg"><label class="fl">Email</label><input class="fi" id="femail" type="email" value="'+escH(d.email||'')+'"></div></div>'+
-    '<div class="fg"><label class="fl">Statut</label><select class="fi" id="fstat"><option'+(d.statut==='Actif'?' selected':'')+' value="Actif">Actif</option><option'+(d.statut==='Inactif'?' selected':'')+' value="Inactif">Inactif</option></select></div>',!!id);
+MODE=‘tech’;EID=id||null;var d=id?D.techniciens.find(function(x){return x.id===id;}):{};
+var curFonc=d.fonction||d.specialite||’’;
+openModal(id?‘Modifier technicien’:‘Nouveau technicien’,
+‘<div class="fg"><label class="fl">Nom complet</label><input class="fi" id="fnom" value="'+escH(d.nom||'')+'"></div>’+
+‘<div class="fg2">’+
+‘<div class="fg"><label class="fl">Fonction</label><select class="fi" id="ffonc">’+opts(FONCTIONS,curFonc)+’</select></div>’+
+‘<div class="fg"><label class="fl">Zone d'intervention</label><select class="fi" id="fzone">’+opts(ZONES,d.zone)+’</select></div>’+
+‘</div>’+
+‘<div class="fg2"><div class="fg"><label class="fl">Téléphone</label><input class="fi" id="ftel" value="'+escH(d.tel||'')+'"></div>’+
+‘<div class="fg"><label class="fl">Email</label><input class="fi" id="femail" type="email" value="'+escH(d.email||'')+'"></div></div>’+
+‘<div class="fg"><label class="fl">Statut</label><select class="fi" id="fstat"><option’+(d.statut===‘Actif’?’ selected’:’’)+’ value=“Actif”>Actif</option><option’+(d.statut===‘Inactif’?’ selected’:’’)+’ value=“Inactif”>Inactif</option></select></div>’,!!id);
 }
 function editTech(id){mTech(id);}
 
 function mStock(id){
-  MODE='stock';EID=id||null;var d=id?D.stock.find(function(x){return x.id===id;}):{};
-  openModal(id?'Modifier pièce — '+escH(d.ref):'Nouvelle pièce',
-    '<div class="fg2"><div class="fg"><label class="fl">Référence</label><input class="fi" id="fref" value="'+escH(d.ref||'')+'"></div>'+
-    '<div class="fg"><label class="fl">Catégorie</label><input class="fi" id="fcat" value="'+escH(d.categorie||'')+'"></div></div>'+
-    '<div class="fg"><label class="fl">Désignation</label><input class="fi" id="fdes" value="'+escH(d.designation||'')+'"></div>'+
-    '<div class="fg2"><div class="fg"><label class="fl">Quantité</label><input class="fi" type="number" id="fqte" value="'+(d.qte!=null?d.qte:0)+'" min="0" step="1"></div>'+
-    '<div class="fg"><label class="fl">Seuil min.</label><input class="fi" type="number" id="fmin" value="'+(d.qte_min!=null?d.qte_min:1)+'" min="0" step="1"></div></div>'+
-    '<div class="fg2"><div class="fg"><label class="fl">Prix unitaire (€)</label><input class="fi" type="number" step="0.01" id="fprix" value="'+(d.prix||0)+'"></div>'+
-    '<div class="fg"><label class="fl">Fournisseur</label><input class="fi" id="ffour" value="'+escH(d.fournisseur||'')+'"></div></div>',!!id);
+MODE=‘stock’;EID=id||null;var d=id?D.stock.find(function(x){return x.id===id;}):{};
+openModal(id?‘Modifier pièce — ‘+escH(d.ref):‘Nouvelle pièce’,
+‘<div class="fg2"><div class="fg"><label class="fl">Référence</label><input class="fi" id="fref" value="'+escH(d.ref||'')+'"></div>’+
+‘<div class="fg"><label class="fl">Catégorie</label><input class="fi" id="fcat" value="'+escH(d.categorie||'')+'"></div></div>’+
+‘<div class="fg"><label class="fl">Désignation</label><input class="fi" id="fdes" value="'+escH(d.designation||'')+'"></div>’+
+‘<div class="fg2"><div class="fg"><label class="fl">Quantité</label><input class="fi" type="number" id="fqte" value="'+(d.qte!=null?d.qte:0)+'" min="0" step="1"></div>’+
+‘<div class="fg"><label class="fl">Seuil min.</label><input class="fi" type="number" id="fmin" value="'+(d.qte_min!=null?d.qte_min:1)+'" min="0" step="1"></div></div>’+
+‘<div class="fg2"><div class="fg"><label class="fl">Prix unitaire (€)</label><input class="fi" type="number" step="0.01" id="fprix" value="'+(d.prix||0)+'"></div>’+
+‘<div class="fg"><label class="fl">Fournisseur</label><input class="fi" id="ffour" value="'+escH(d.fournisseur||'')+'"></div></div>’,!!id);
 }
 function editStock(id){mStock(Number(id));}
-function cmdStock(id){id=Number(id);var s=D.stock.find(function(x){return x.id===id;});if(!s)return;var q=prompt('Quantité reçue pour '+s.ref+' ?','');if(!q||isNaN(Number(q))||Number(q)<=0)return;s.qte=s.qte+Number(q);s.derniere_commande=todayStr();s.nb_commandes=(s.nb_commandes||0)+1;save();draw(PAGE,LS);}
+function cmdStock(id){id=Number(id);var s=D.stock.find(function(x){return x.id===id;});if(!s)return;var q=prompt(‘Quantité reçue pour ‘+s.ref+’ ?’,’’);if(!q||isNaN(Number(q))||Number(q)<=0)return;s.qte=s.qte+Number(q);s.derniere_commande=todayStr();s.nb_commandes=(s.nb_commandes||0)+1;save();draw(PAGE,LS);}
 
 /* USERS */
 function newUser(){editUser(null);}
 function editUser(id){
-  var u=id?USERS.find(function(x){return x.id===id;}):{};
-  var body='<div class="fg"><label class="fl">Nom complet</label><input class="fi" id="u-nom" value="'+escH(u.nom||'')+'"></div>'+
-    '<div class="fg2"><div class="fg"><label class="fl">Identifiant</label><input class="fi" id="u-user" value="'+escH(u.username||'')+'"></div>'+
-    '<div class="fg"><label class="fl">Email</label><input class="fi" id="u-email" type="email" value="'+escH(u.email||'')+'"></div></div>'+
-    '<div class="fg"><label class="fl">Mot de passe</label><div style="position:relative"><input class="fi" type="password" id="u-pass" placeholder="'+(id?'Laisser vide = inchangé':'Définir un mot de passe')+'" value="" style="padding-right:36px"><button onclick="tvp(\'u-pass\')" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px">&#128065;</button></div></div>'+
-    '<div class="fg"><label class="fl">Rôle</label><select class="fi" id="u-role"><option'+(u.role==='technicien'?' selected':'')+' value="technicien">Technicien</option><option'+(u.role==='responsable'?' selected':'')+' value="responsable">Responsable</option><option'+(u.role==='commercial'?' selected':'')+' value="commercial">Commercial</option><option'+(u.role==='admin'?' selected':'')+' value="admin">Administrateur</option><option'+(u.role==='createur'?' selected':'')+' value="createur">Créateur</option></select></div>'+
-    '<div style="background:var(--bg2);border-radius:var(--r);padding:10px 12px;font-size:11px;color:var(--txt2)">'+
-    '<strong style="color:var(--txt);display:block;margin-bottom:6px">Accès selon le rôle :</strong>'+
-    '<div>🔧 <strong>Technicien</strong> — Modifier ses interventions + devis</div>'+
-    '<div>👔 <strong>Responsable</strong> — Créer interventions, valider, KPIs, stock</div>'+
-    '<div>💼 <strong>Commercial</strong> — Voir interventions, changer statut devis</div>'+
-    '<div>⚙️ <strong>Administrateur</strong> — Gérer utilisateurs, matériels, clients, pièces</div>'+
-    '<div>👑 <strong>Créateur</strong> — Accès total</div>'+
-    '</div>';
-  MODE='user';EID=id||null;
-  openModal(id?'Modifier utilisateur':'Nouvel utilisateur',body,id&&u.id!==1);
+var u=id?USERS.find(function(x){return x.id===id;}):{};
+var body=’<div class="fg"><label class="fl">Nom complet</label><input class="fi" id="u-nom" value="'+escH(u.nom||'')+'"></div>’+
+‘<div class="fg2"><div class="fg"><label class="fl">Identifiant</label><input class="fi" id="u-user" value="'+escH(u.username||'')+'"></div>’+
+‘<div class="fg"><label class="fl">Email</label><input class="fi" id="u-email" type="email" value="'+escH(u.email||'')+'"></div></div>’+
+‘<div class="fg"><label class="fl">Mot de passe</label><div style="position:relative"><input class="fi" type="password" id="u-pass" placeholder="'+(id?'Laisser vide = inchangé':'Définir un mot de passe')+'" value="" style="padding-right:36px"><button onclick="tvp(\'u-pass\')" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px">👁</button></div></div>’+
+‘<div class="fg"><label class="fl">Rôle</label><select class="fi" id="u-role"><option’+(u.role===‘technicien’?’ selected’:’’)+’ value=“technicien”>Technicien</option><option’+(u.role===‘responsable’?’ selected’:’’)+’ value=“responsable”>Responsable</option><option’+(u.role===‘commercial’?’ selected’:’’)+’ value=“commercial”>Commercial</option><option’+(u.role===‘admin’?’ selected’:’’)+’ value=“admin”>Administrateur</option><option’+(u.role===‘createur’?’ selected’:’’)+’ value=“createur”>Créateur</option></select></div>’+
+‘<div style="background:var(--bg2);border-radius:var(--r);padding:10px 12px;font-size:11px;color:var(--txt2)">’+
+‘<strong style="color:var(--txt);display:block;margin-bottom:6px">Accès selon le rôle :</strong>’+
+‘<div>🔧 <strong>Technicien</strong> — Modifier ses interventions + devis</div>’+
+‘<div>👔 <strong>Responsable</strong> — Créer interventions, valider, KPIs, stock</div>’+
+‘<div>💼 <strong>Commercial</strong> — Voir interventions, changer statut devis</div>’+
+‘<div>⚙️ <strong>Administrateur</strong> — Gérer utilisateurs, matériels, clients, pièces</div>’+
+‘<div>👑 <strong>Créateur</strong> — Accès total</div>’+
+‘</div>’;
+MODE=‘user’;EID=id||null;
+openModal(id?‘Modifier utilisateur’:‘Nouvel utilisateur’,body,id&&u.id!==1);
 }
 function saveUser(){
-  var nom=gv('u-nom'),uname=gv('u-user'),pass=gv('u-pass'),role=gv('u-role'),email=gv('u-email');
-  if(!nom||!uname){alert('Nom et identifiant requis.');return;}
-  if(EID){var u=USERS.find(function(x){return x.id===EID;});u.nom=nom;u.username=uname;u.role=role;u.email=email;if(pass)u.password=pass;}
-  else USERS.push({id:nextId('user'),nom:nom,username:uname,password:pass,role:role,email:email});
-  save();closeModal();draw('settings','');
+var nom=gv(‘u-nom’),uname=gv(‘u-user’),pass=gv(‘u-pass’),role=gv(‘u-role’),email=gv(‘u-email’);
+if(!nom||!uname){alert(‘Nom et identifiant requis.’);return;}
+if(EID){var u=USERS.find(function(x){return x.id===EID;});u.nom=nom;u.username=uname;u.role=role;u.email=email;if(pass)u.password=pass;}
+else USERS.push({id:nextId(‘user’),nom:nom,username:uname,password:pass,role:role,email:email});
+save();closeModal();draw(‘settings’,’’);
 }
 
 /* ================================================================
-   SAVE MODAL
+SAVE MODAL
 ================================================================ */
 function saveModal(){
-  if(MODE==='view'){closeModal();return;}
-  if(MODE==='user'){saveUser();return;}
-  if(MODE==='inter'){
-    var o={id:EID||(nextId('inter')),article:gv('fart-in'),serie:gv('fserie-in'),client:gv('fcli'),statut:gv('fstat'),technicien:gv('ftech'),date_debut:gv('fdeb'),date_fin:gv('dfin'),description:gv('fdesc'),pieces:TMP_PIECES.slice(),devis:collectDevis()};
-    if(EID){var i=D.interventions.findIndex(function(x){return x.id===EID;});if(i>=0)D.interventions[i]=o;}else D.interventions.unshift(o);
-    syncMatStatut();
-    /* → historique only if (Terminé or Annulé) AND devis Accepté or Refusé */
-    var dvSettled=o.devis&&(o.devis.statut==='Accepté'||o.devis.statut==='Refusé');
-    if((o.statut==='Terminé'||o.statut==='Annulé')&&dvSettled){
-      o.date_cloture=o.date_cloture||todayStr();
-      if(!D.historique.find(function(h){return h.id===o.id;}))D.historique.unshift(o);
-      D.interventions=D.interventions.filter(function(x){return x.id!==o.id;});
-    }
-  }else if(MODE==='mat'){
-    var dmat=EID?D.materiels.find(function(x){return x.id===EID;}):{}; var o={id:EID||(nextId('mat')),article:gv('fart'),serie:gv('fserie'),client:gv('fcli'),marque:gv('fmarq'),technicien:gv('ftech'),statut:(dmat&&dmat.statut)||'',localisation:gv('floc')};
-    if(EID){var i=D.materiels.findIndex(function(x){return x.id===EID;});if(i>=0)D.materiels[i]=o;}else D.materiels.push(o);
-  }else if(MODE==='cli'){
-    var o={id:EID||(nextId('cli')),nom:gv('fnom'),contact:gv('fcontact'),tel:gv('ftel'),email:gv('femail'),adresse:gv('fadr'),notes:gv('fnotes')};
-    if(EID){var i=D.clients.findIndex(function(x){return x.id===EID;});if(i>=0)D.clients[i]=o;}else D.clients.push(o);
-  }else if(MODE==='tech'){
-    var o={id:EID||(nextId('tech')),nom:gv('fnom'),fonction:gv('ffonc'),zone:gv('fzone'),tel:gv('ftel'),email:gv('femail'),statut:gv('fstat')};
-    if(EID){var i=D.techniciens.findIndex(function(x){return x.id===EID;});if(i>=0)D.techniciens[i]=o;}else D.techniciens.push(o);
-  }else if(MODE==='stock'){
-    var o={id:EID||(nextId('stock')),ref:gv('fref'),designation:gv('fdes'),categorie:gv('fcat'),qte:gn('fqte'),qte_min:gn('fmin'),prix:gn('fprix'),fournisseur:gv('ffour'),delai_reappro:gn('fdelai')||7,derniere_commande:gv('fdcmd'),nb_commandes:(EID?((D.stock.find(function(x){return x.id===EID;})||{}).nb_commandes||0):0)};
-    if(EID){var i=D.stock.findIndex(function(x){return x.id===EID;});if(i>=0)D.stock[i]=o;}else D.stock.push(o);
-  }
-  save();closeModal();draw(PAGE,LS);
+if(MODE===‘view’){closeModal();return;}
+if(MODE===‘user’){saveUser();return;}
+if(MODE===‘inter’){
+var o={id:EID||(nextId(‘inter’)),article:gv(‘fart-in’),serie:gv(‘fserie-in’),client:gv(‘fcli’),statut:gv(‘fstat’),technicien:gv(‘ftech’),date_debut:gv(‘fdeb’),date_fin:gv(‘dfin’),description:gv(‘fdesc’),pieces:TMP_PIECES.slice(),devis:collectDevis()};
+if(EID){var i=D.interventions.findIndex(function(x){return x.id===EID;});if(i>=0)D.interventions[i]=o;}else D.interventions.unshift(o);
+syncMatStatut();
+/* → historique only if (Terminé or Annulé) AND devis Accepté or Refusé */
+var dvSettled=o.devis&&(o.devis.statut===‘Accepté’||o.devis.statut===‘Refusé’);
+if((o.statut===‘Terminé’||o.statut===‘Annulé’)&&dvSettled){
+o.date_cloture=o.date_cloture||todayStr();
+if(!D.historique.find(function(h){return h.id===o.id;}))D.historique.unshift(o);
+D.interventions=D.interventions.filter(function(x){return x.id!==o.id;});
+}
+}else if(MODE===‘mat’){
+var dmat=EID?D.materiels.find(function(x){return x.id===EID;}):{}; var o={id:EID||(nextId(‘mat’)),article:gv(‘fart’),serie:gv(‘fserie’),client:gv(‘fcli’),marque:gv(‘fmarq’),technicien:gv(‘ftech’),statut:(dmat&&dmat.statut)||’’,localisation:gv(‘floc’)};
+if(EID){var i=D.materiels.findIndex(function(x){return x.id===EID;});if(i>=0)D.materiels[i]=o;}else D.materiels.push(o);
+}else if(MODE===‘cli’){
+var o={id:EID||(nextId(‘cli’)),nom:gv(‘fnom’),contact:gv(‘fcontact’),tel:gv(‘ftel’),email:gv(‘femail’),adresse:gv(‘fadr’),notes:gv(‘fnotes’)};
+if(EID){var i=D.clients.findIndex(function(x){return x.id===EID;});if(i>=0)D.clients[i]=o;}else D.clients.push(o);
+}else if(MODE===‘tech’){
+var o={id:EID||(nextId(‘tech’)),nom:gv(‘fnom’),fonction:gv(‘ffonc’),zone:gv(‘fzone’),tel:gv(‘ftel’),email:gv(‘femail’),statut:gv(‘fstat’)};
+if(EID){var i=D.techniciens.findIndex(function(x){return x.id===EID;});if(i>=0)D.techniciens[i]=o;}else D.techniciens.push(o);
+}else if(MODE===‘stock’){
+var o={id:EID||(nextId(‘stock’)),ref:gv(‘fref’),designation:gv(‘fdes’),categorie:gv(‘fcat’),qte:gn(‘fqte’),qte_min:gn(‘fmin’),prix:gn(‘fprix’),fournisseur:gv(‘ffour’),delai_reappro:gn(‘fdelai’)||7,derniere_commande:gv(‘fdcmd’),nb_commandes:(EID?((D.stock.find(function(x){return x.id===EID;})||{}).nb_commandes||0):0)};
+if(EID){var i=D.stock.findIndex(function(x){return x.id===EID;});if(i>=0)D.stock[i]=o;}else D.stock.push(o);
+}
+save();closeModal();draw(PAGE,LS);
 }
 
 /* ================================================================
-   BOOT
+BOOT
 ================================================================ */
 load();
-draw(PAGE,'');
+draw(PAGE,’’);
 </script>
 
 </body>
