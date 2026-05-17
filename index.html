@@ -188,6 +188,7 @@ textarea.fi{resize:vertical;}
 .sparkbar{display:flex;align-items:flex-end;gap:3px;height:36px;}
 .sbar{flex:1;background:var(--blue);border-radius:2px 2px 0 0;opacity:.75;min-width:6px;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -219,6 +220,7 @@ textarea.fi{resize:vertical;}
         <div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="sb-name">—</div>
         <div style="font-size:10px;color:var(--txt2);" id="sb-role">—</div>
       </div>
+      <div id="supa-status" title="Vérification..." style="width:8px;height:8px;border-radius:50%;background:#d97706;flex-shrink:0;margin-left:6px"></div>
     </div>
   </div>
   <div class="main">
@@ -313,35 +315,56 @@ var USERS=[];
    STORAGE
 ================================================================ */
 function load(){
+  initSupa();
   loadCounters();
-  (function(){var vk='chastagner_v7_ver',cv='7.4';if(localStorage.getItem(vk)!==cv){var cnt=localStorage.getItem(SK+'_cnt');localStorage.clear();if(cnt)localStorage.setItem(SK+'_cnt',cnt);localStorage.setItem(vk,cv);}})();
-  try{var s=localStorage.getItem(SK);if(s)D=JSON.parse(s);else{D=buildDefaults();save();}}
+  (function(){var vk='chastagner_v7_ver',cv='7.5';if(localStorage.getItem(vk)!==cv){var cnt=localStorage.getItem(SK+'_cnt');localStorage.clear();if(cnt)localStorage.setItem(SK+'_cnt',cnt);localStorage.setItem(vk,cv);}})();
+  try{var s=localStorage.getItem(SK);if(s)D=JSON.parse(s);else{D=buildDefaults();}}
   catch(e){D=buildDefaults();}
   if(!D.historique)D.historique=[];
   if(!D.users)D.users=buildDefaults().users;
-  if(!D.materiels||D.materiels.length===0){D.materiels=buildDefaults().materiels;save();}
-  if(!D.stock||D.stock.length===0){D.stock=buildDefaults().stock;save();}
+  if(!D.materiels||D.materiels.length===0){D.materiels=buildDefaults().materiels;}
+  if(!D.stock||D.stock.length===0){D.stock=buildDefaults().stock;}
   USERS=D.users;
   CURRENT_USER=USERS[0];
-  /* Sync all materiel statuts from active interventions on load */
   if(D.interventions&&D.materiels){
-    /* First reset all materiels to empty */
     D.materiels.forEach(function(m){m.statut='';});
-    /* Then sync from active interventions */
     D.interventions.forEach(function(i){syncMatStatut();});
-    /* Then sync from historique (Terminé/Annulé → Finis) */
     if(D.historique)(D.historique).forEach(function(i){syncMatStatut();});
   }
-  /* migrate Annulé/Terminé to historique */
   if(D.interventions){
     var mv=D.interventions.filter(function(i){return i.statut==='Terminé'||i.statut==='Annulé';});
     if(mv.length){mv.forEach(function(i){if(!D.historique.find(function(h){return h.id===i.id;}))D.historique.push(i);});D.interventions=D.interventions.filter(function(i){return i.statut!=='Terminé'&&i.statut!=='Annulé';});}
-    save();
   }
+  /* Sauvegarder localement d'abord puis charger depuis Supabase */
+  saveLocal();
   draw(PAGE,'');
   applySidebarPerms();
+  /* Charger depuis Supabase en arrière-plan */
+  if(SUPA_OK){
+    loadFromSupa().then(function(ok){
+      if(ok){
+        USERS=D.users||USERS;
+        CURRENT_USER=USERS[0];
+        saveLocal();
+        syncMatStatut();
+        draw(PAGE,'');
+        /* Indicateur connexion */
+        showSupaStatus(true);
+      }
+    }).catch(function(){showSupaStatus(false);});
+  }
 }
-function save(){D.users=USERS;try{localStorage.setItem(SK,JSON.stringify(D));}catch(e){}}
+function saveLocal(){D.users=USERS;try{localStorage.setItem(SK,JSON.stringify(D));}catch(e){}}
+function save(){
+  saveLocal();
+  if(SUPA_OK){saveToSupa().catch(function(e){console.warn('Supabase save error',e);});}
+}
+function showSupaStatus(ok){
+  var el=document.getElementById('supa-status');
+  if(!el)return;
+  el.title=ok?'Connecté à Supabase':'Hors ligne — données locales uniquement';
+  el.style.background=ok?'#16a34a':'#d97706';
+}
 function syncMatStatut(){
   var mapActif={'En cours':'En cours','En attente':"En attente d'acceptation",'Devis fait':'Devis fait'};
   D.materiels.forEach(function(m){m.statut='';});
@@ -955,8 +978,99 @@ function rPlanning(){
 }
 
 /* ================================================================
-   ANALYTICS KPIs
+   SUPABASE — stockage en ligne
 ================================================================ */
+var SUPA_URL='https://gruruldzmkimknynnzpi.supabase.co';
+var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdydXJ1bGR6bWtpbWtueW5uenBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MDYzOTIsImV4cCI6MjA5NDE4MjM5Mn0.NqvGzO8CM0EETApn6-skwCQaqag7aq-faRSuFlF5cgg';
+var supa=null;
+var SUPA_OK=false;
+
+function initSupa(){
+  try{
+    supa=supabase.createClient(SUPA_URL,SUPA_KEY);
+    SUPA_OK=true;
+  }catch(e){
+    console.warn('Supabase non disponible:',e);
+    SUPA_OK=false;
+  }
+}
+
+async function supaLoad(table){
+  if(!SUPA_OK)return[];
+  try{
+    var r=await supa.from(table).select('*');
+    if(r.error){console.warn('supaLoad',table,r.error);return[];}
+    return r.data||[];
+  }catch(e){return[];}
+}
+
+async function supaUpsert(table,rows){
+  if(!SUPA_OK||!rows||!rows.length)return;
+  try{
+    /* Nettoyer les objets avant envoi */
+    var clean=rows.map(function(r){
+      var o=JSON.parse(JSON.stringify(r));
+      return o;
+    });
+    var r=await supa.from(table).upsert(clean,{onConflict:'id'});
+    if(r.error)console.warn('supaUpsert',table,r.error);
+  }catch(e){console.warn('supaUpsert error',e);}
+}
+
+async function supaDelete(table,id){
+  if(!SUPA_OK)return;
+  try{
+    var r=await supa.from(table).delete().eq('id',id);
+    if(r.error)console.warn('supaDelete',table,r.error);
+  }catch(e){}
+}
+
+async function loadFromSupa(){
+  if(!SUPA_OK)return false;
+  try{
+    var results=await Promise.all([
+      supaLoad('interventions'),
+      supaLoad('historique'),
+      supaLoad('materiels'),
+      supaLoad('clients'),
+      supaLoad('techniciens'),
+      supaLoad('stock'),
+      supaLoad('users')
+    ]);
+    var hasData=results.some(function(r){return r.length>0;});
+    if(hasData){
+      D.interventions = results[0].length ? results[0] : D.interventions;
+      D.historique    = results[1].length ? results[1] : D.historique;
+      D.materiels     = results[2].length ? results[2] : D.materiels;
+      D.clients       = results[3].length ? results[3] : D.clients;
+      D.techniciens   = results[4].length ? results[4] : D.techniciens;
+      D.stock         = results[5].length ? results[5] : D.stock;
+      D.users         = results[6].length ? results[6] : D.users;
+      return true;
+    }
+    /* Tables vides → pousser les données par défaut vers Supabase */
+    await pushAllToSupa();
+    return true;
+  }catch(e){console.warn('loadFromSupa error',e);return false;}
+}
+
+async function pushAllToSupa(){
+  if(!SUPA_OK)return;
+  await supaUpsert('interventions',D.interventions);
+  await supaUpsert('historique',D.historique);
+  await supaUpsert('materiels',D.materiels);
+  await supaUpsert('clients',D.clients);
+  await supaUpsert('techniciens',D.techniciens);
+  await supaUpsert('stock',D.stock);
+  await supaUpsert('users',D.users);
+}
+
+async function saveToSupa(){
+  if(!SUPA_OK)return;
+  await pushAllToSupa();
+}
+
+
 function rAnalytics(){
   var p=ANALYTICS_PERIOD;
   var k=calcKPIs(p);
