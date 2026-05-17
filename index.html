@@ -262,7 +262,7 @@ var ZONES=['Herbay-sur-Seine (02)','Neuilly-sur-Seine (01)','Orlean (05)','Rouen
 var FONCTIONS=['Semi-itinérant','Électro-technicien','Responsable'];
 var MARQUES=['MARQUE GELEE','IMER','HUCHEZ','TEA','VERLINDE','AUTRES','CMCO','TRACTEL','PARSON','TELIP','REMA','SVERO','HADEF','COMEGE','FIXATOR','DELTA'];
 var SM=['','En cours',"En attentes d'acceptation",'Devis fait','Finis'];
-var SI=['En cours','En attente','Devis fait','Terminé','Annulé'];
+var SI=['En cours','En attente','En attente pièces','Devis fait','Terminé','Annulé'];
 var DV_STATS=['En attente','Envoyé','Accepté','Refusé'];
 var ALL_PERMS=['view_dashboard','view_interventions','edit_interventions','view_historique','view_materiels','edit_materiels','view_clients','edit_clients','view_techniciens','edit_techniciens','view_stock','edit_stock'];
 
@@ -426,7 +426,7 @@ function closeBlockReason(i){
 
 /* BADGES */
 function bdg(c,t){return'<span class="bdg '+c+'">'+escH(String(t||''))+'</span>';}
-function bstat(s){return s==='En cours'?bdg('b-blue',s):s==='Terminé'?bdg('b-green',s):s==='En attente'?bdg('b-amber',s):s==='Devis fait'?bdg('b-purple',s):s==='Annulé'?bdg('b-red',s):bdg('b-gray',s||'—');}
+function bstat(s){return s==='En cours'?bdg('b-blue',s):s==='Terminé'?bdg('b-green',s):s==='En attente'?bdg('b-amber',s):s==='En attente pièces'?bdg('b-orange','Att. pièces'):s==='Devis fait'?bdg('b-purple',s):s==='Annulé'?bdg('b-red',s):bdg('b-gray',s||'—');}
 function bdvs(s){return s==='Accepté'?bdg('b-green',s):s==='Refusé'?bdg('b-red',s):s==='Envoyé'?bdg('b-blue',s):bdg('b-amber',s||'En attente');}
 function bmat(s){return s==='En cours'?bdg('b-blue','En cours'):s==='Finis'?bdg('b-green','Finis'):s==="En attentes d'acceptation"?bdg('b-amber','Att. accept.'):s==='Devis fait'?bdg('b-purple',s):bdg('b-gray',s||'—');}
 
@@ -757,10 +757,35 @@ function cloreInter(id){
   var i=D.interventions[idx];
   var reason=closeBlockReason(i);
   if(reason){alert('Impossible de clore : '+reason);return;}
+  /* Déduire les pièces du stock */
+  if(i.pieces&&i.pieces.length){
+    i.pieces.forEach(function(p){
+      if(!p.stock_id)return;
+      var stk=D.stock.find(function(s){return s.id===p.stock_id;});
+      if(stk){stk.qte=Math.max(0,stk.qte-p.qte);}
+    });
+  }
   i.statut='Terminé';i.date_cloture=todayStr();
   syncMatStatut();
   D.historique.unshift(i);D.interventions.splice(idx,1);
+  /* Vérifier si d'autres interventions attendent ces pièces */
+  checkAllPiecesStatut();
   save();draw(PAGE,LS);
+}
+
+function checkAllPiecesStatut(){
+  D.interventions.forEach(function(inter){
+    if(!inter.pieces||!inter.pieces.length)return;
+    var manque=inter.pieces.some(function(p){
+      var stk=D.stock.find(function(s){return s.id===p.stock_id;});
+      return stk&&stk.qte<p.qte;
+    });
+    if(manque&&inter.statut!=='En attente pièces'&&inter.statut!=='Terminé'&&inter.statut!=='Annulé'){
+      inter.statut='En attente pièces';
+    } else if(!manque&&inter.statut==='En attente pièces'){
+      inter.statut='En cours';
+    }
+  });
 }
 
 /* ================================================================
@@ -1597,10 +1622,68 @@ function openAdd(){var m={interventions:'inter',materiels:'mat',clients:'cli',te
 /* ================================================================
    PIECES TAGS
 ================================================================ */
-function renderPTags(){return TMP_PIECES.map(function(p,i){return'<span class="ptag">'+escH(p)+'<span class="ptag-rm" onclick="rmP('+i+')">×</span></span>';}).join('');}
-function rmP(i){TMP_PIECES.splice(i,1);document.getElementById('ptags').innerHTML=renderPTags();syncPiecesToDevis();}
-function addPieceInput(){var inp=document.getElementById('fpiece-in');if(!inp)return;var v=inp.value.trim();if(v&&TMP_PIECES.indexOf(v)<0){TMP_PIECES.push(v);document.getElementById('ptags').innerHTML=renderPTags();inp.value='';var d=document.getElementById('fpiece-drop');if(d)d.classList.remove('show');syncPiecesToDevis();}}
-function syncPiecesToDevis(){var ex={};DV_P.forEach(function(l){ex[l.desc]=l;});DV_P=TMP_PIECES.map(function(p){if(ex[p])return ex[p];var stk=D.stock.find(function(s){return(s.ref+' — '+s.designation)===p||s.designation===p;});return{desc:p,qte:1,pu:stk?stk.prix:0};});refreshDvP();}
+var UNITE_LIST=['Unité','Mètre','Litre','Kg','Paire','Jeu','Rouleau','Boîte'];
+
+function renderPTags(){
+  return TMP_PIECES.map(function(p,i){
+    var stk=D.stock.find(function(s){return s.id===p.stock_id;});
+    var dispo=stk?stk.qte:null;
+    var manque=dispo!==null&&dispo<p.qte;
+    return'<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:'+(manque?'var(--redbg)':'var(--bg2)')+';border:1px solid '+(manque?'#fca5a5':'var(--bdr)')+';border-radius:var(--r);margin-bottom:4px">'+
+      '<span style="flex:1;font-size:11px;font-weight:600;color:'+(manque?'var(--red)':'var(--txt)')+'">'+escH(p.ref)+' — '+escH(p.nom)+'</span>'+
+      '<input type="number" min="0.1" step="0.1" value="'+p.qte+'" style="width:54px;padding:3px 6px;border:1px solid var(--bdr);border-radius:4px;font-size:11px" onchange="updP('+i+',\'qte\',this.value)">'+
+      '<select style="padding:3px 4px;border:1px solid var(--bdr);border-radius:4px;font-size:10px" onchange="updP('+i+',\'unite\',this.value)">'+
+        UNITE_LIST.map(function(u){return'<option'+(u===p.unite?' selected':'')+'>'+u+'</option>';}).join('')+
+      '</select>'+
+      (manque?'<span style="font-size:9px;font-weight:700;color:var(--red);white-space:nowrap">Rupture ('+dispo+' dispo.)</span>':'')+
+      '<span onclick="rmP('+i+')" style="cursor:pointer;color:var(--txt2);font-size:14px;padding:0 2px">×</span>'+
+    '</div>';
+  }).join('')||'<div style="color:var(--txt3);font-size:11px;padding:4px 0">Aucune pièce ajoutée</div>';
+}
+
+function updP(i,field,val){
+  if(field==='qte')TMP_PIECES[i].qte=parseFloat(val)||1;
+  else TMP_PIECES[i].unite=val;
+  document.getElementById('ptags').innerHTML=renderPTags();
+  syncPiecesToDevis();
+  checkPiecesStatut();
+}
+
+function rmP(i){TMP_PIECES.splice(i,1);document.getElementById('ptags').innerHTML=renderPTags();syncPiecesToDevis();checkPiecesStatut();}
+
+function addPieceInput(){
+  var inp=document.getElementById('fpiece-in');if(!inp)return;
+  var v=inp.value.trim();if(!v)return;
+  var stk=D.stock.find(function(s){return(s.ref+' — '+s.designation)===v;});
+  if(!stk){alert('Pièce introuvable dans le stock.');return;}
+  if(TMP_PIECES.find(function(p){return p.stock_id===stk.id;})){alert('Pièce déjà ajoutée.');return;}
+  TMP_PIECES.push({stock_id:stk.id,ref:stk.ref,nom:stk.designation,qte:1,unite:stk.unite||'Unité'});
+  document.getElementById('ptags').innerHTML=renderPTags();
+  inp.value='';
+  var d=document.getElementById('fpiece-drop');if(d)d.classList.remove('show');
+  syncPiecesToDevis();
+  checkPiecesStatut();
+}
+
+function checkPiecesStatut(){
+  var fstat=document.getElementById('fstat');if(!fstat)return;
+  var manque=TMP_PIECES.some(function(p){
+    var stk=D.stock.find(function(s){return s.id===p.stock_id;});
+    return stk&&stk.qte<p.qte;
+  });
+  if(manque&&fstat.value!=='En attente pièces'){fstat.value='En attente pièces';}
+  else if(!manque&&fstat.value==='En attente pièces'){fstat.value='En cours';}
+}
+
+function syncPiecesToDevis(){
+  var ex={};DV_P.forEach(function(l){ex[l.desc]=l;});
+  DV_P=TMP_PIECES.map(function(p){
+    var key=p.ref+' — '+p.nom;
+    if(ex[key])return ex[key];
+    return{desc:key,qte:p.qte,pu:D.stock.find(function(s){return s.id===p.stock_id;})?D.stock.find(function(s){return s.id===p.stock_id;}).prix:0};
+  });
+  refreshDvP();
+}
 
 /* ================================================================
    DEVIS BUILDER
@@ -1630,7 +1713,12 @@ function collectDevis(){return{statut:gv('dv-stat'),date_devis:gv('dv-date'),vgp
 function mInter(id){
   MODE='inter';EID=id||null;
   var d=id?D.interventions.find(function(x){return x.id===id;}):{};
-  TMP_PIECES=d.pieces?d.pieces.slice():[];
+  TMP_PIECES=d.pieces?d.pieces.map(function(p){
+    if(typeof p==='object'&&p.stock_id)return p;
+    /* Migration ancien format texte */
+    var stk=D.stock.find(function(s){return(s.ref+' — '+s.designation)===p||s.designation===p||s.ref===p;});
+    return stk?{stock_id:stk.id,ref:stk.ref,nom:stk.designation,qte:1,unite:'Unité'}:{stock_id:null,ref:p,nom:'',qte:1,unite:'Unité'};
+  }):[];
   DV_P=d.devis&&d.devis.lignes_pieces?JSON.parse(JSON.stringify(d.devis.lignes_pieces)):[];
   DV_MO=d.devis&&d.devis.mo?JSON.parse(JSON.stringify(d.devis.mo)):[];
   var articles=uniq(D.materiels.map(function(m){return m.article;}).filter(Boolean)).sort();
@@ -1751,7 +1839,7 @@ function mStock(id){
     '<div class="fg"><label class="fl">Fournisseur</label><input class="fi" id="ffour" value="'+escH(d.fournisseur||'')+'"></div></div>',!!id);
 }
 function editStock(id){mStock(Number(id));}
-function cmdStock(id){id=Number(id);var s=D.stock.find(function(x){return x.id===id;});if(!s)return;var q=prompt('Quantité reçue pour '+s.ref+' ?','');if(!q||isNaN(Number(q))||Number(q)<=0)return;s.qte=s.qte+Number(q);s.derniere_commande=todayStr();s.nb_commandes=(s.nb_commandes||0)+1;save();draw(PAGE,LS);}
+function cmdStock(id){id=Number(id);var s=D.stock.find(function(x){return x.id===id;});if(!s)return;var q=prompt('Quantité reçue pour '+s.ref+' ?','');if(!q||isNaN(Number(q))||Number(q)<=0)return;s.qte=s.qte+Number(q);s.derniere_commande=todayStr();s.nb_commandes=(s.nb_commandes||0)+1;checkAllPiecesStatut();save();draw(PAGE,LS);}
 
 /* USERS */
 function newUser(){editUser(null);}
@@ -1788,7 +1876,14 @@ function saveModal(){
   if(MODE==='view'){closeModal();return;}
   if(MODE==='user'){saveUser();return;}
   if(MODE==='inter'){
-    var o={id:EID||(nextId('inter')),article:gv('fart-in'),serie:gv('fserie-in'),client:gv('fcli'),statut:gv('fstat'),technicien:gv('ftech'),date_debut:gv('fdeb'),date_fin:gv('dfin'),description:gv('fdesc'),pieces:TMP_PIECES.slice(),devis:collectDevis()};
+    var fstat=gv('fstat');
+    /* Vérifier statut En attente pièces */
+    var manquePieces=TMP_PIECES.some(function(p){
+      var stk=D.stock.find(function(s){return s.id===p.stock_id;});
+      return stk&&stk.qte<p.qte;
+    });
+    if(manquePieces&&fstat!=='En attente pièces')fstat='En attente pièces';
+    var o={id:EID||(nextId('inter')),article:gv('fart-in'),serie:gv('fserie-in'),client:gv('fcli'),statut:fstat,technicien:gv('ftech'),date_debut:gv('fdeb'),date_fin:gv('dfin'),description:gv('fdesc'),pieces:TMP_PIECES.slice(),devis:collectDevis()};
     if(EID){var i=D.interventions.findIndex(function(x){return x.id===EID;});if(i>=0)D.interventions[i]=o;}else D.interventions.unshift(o);
     syncMatStatut();
     /* → historique only if (Terminé or Annulé) AND devis Accepté or Refusé */
