@@ -1622,7 +1622,7 @@ function openAdd(){var m={interventions:'inter',materiels:'mat',clients:'cli',te
 /* ================================================================
    PIECES TAGS
 ================================================================ */
-var UNITE_LIST=['Unité','Mètre','Litre','Kg','Paire','Jeu','Rouleau','Boîte'];
+var UNITE_LIST=['Unité','Mètre','Litre'];
 
 function renderPTags(){
   return TMP_PIECES.map(function(p,i){
@@ -1829,14 +1829,19 @@ function editTech(id){mTech(id);}
 
 function mStock(id){
   MODE='stock';EID=id||null;var d=id?D.stock.find(function(x){return x.id===id;}):{};
+  var uniteO=UNITE_LIST.map(function(u){return'<option'+(u===(d.unite||'Unité')?' selected':'')+'>'+u+'</option>';}).join('');
+  var catO=['Accrochage','Hydraulique','Moteur','Lubrifiant','Visserie','Levage','Roulement','Sécurité','Transmission','Électrique','Autre'].map(function(c){return'<option'+(c===(d.categorie||'')?' selected':'')+'>'+c+'</option>';}).join('');
   openModal(id?'Modifier pièce — '+escH(d.ref):'Nouvelle pièce',
     '<div class="fg2"><div class="fg"><label class="fl">Référence</label><input class="fi" id="fref" value="'+escH(d.ref||'')+'"></div>'+
-    '<div class="fg"><label class="fl">Catégorie</label><input class="fi" id="fcat" value="'+escH(d.categorie||'')+'"></div></div>'+
+    '<div class="fg"><label class="fl">Catégorie</label><select class="fi" id="fcat">'+catO+'</select></div></div>'+
     '<div class="fg"><label class="fl">Désignation</label><input class="fi" id="fdes" value="'+escH(d.designation||'')+'"></div>'+
-    '<div class="fg2"><div class="fg"><label class="fl">Quantité</label><input class="fi" type="number" id="fqte" value="'+(d.qte!=null?d.qte:0)+'" min="0" step="1"></div>'+
-    '<div class="fg"><label class="fl">Seuil min.</label><input class="fi" type="number" id="fmin" value="'+(d.qte_min!=null?d.qte_min:1)+'" min="0" step="1"></div></div>'+
+    '<div class="fg2"><div class="fg"><label class="fl">Quantité</label><input class="fi" type="number" id="fqte" value="'+(d.qte!=null?d.qte:0)+'" min="0" step="0.1"></div>'+
+    '<div class="fg"><label class="fl">Seuil min.</label><input class="fi" type="number" id="fmin" value="'+(d.qte_min!=null?d.qte_min:1)+'" min="0" step="0.1"></div></div>'+
+    '<div class="fg2"><div class="fg"><label class="fl">Unité</label><select class="fi" id="funite">'+uniteO+'</select></div>'+
+    '<div class="fg"><label class="fl">Délai réappro. (jours)</label><input class="fi" type="number" id="fdelai" value="'+(d.delai_reappro||7)+'" min="1" step="1"></div></div>'+
     '<div class="fg2"><div class="fg"><label class="fl">Prix unitaire (€)</label><input class="fi" type="number" step="0.01" id="fprix" value="'+(d.prix||0)+'"></div>'+
-    '<div class="fg"><label class="fl">Fournisseur</label><input class="fi" id="ffour" value="'+escH(d.fournisseur||'')+'"></div></div>',!!id);
+    '<div class="fg"><label class="fl">Fournisseur</label><input class="fi" id="ffour" value="'+escH(d.fournisseur||'')+'"></div></div>'+
+    '<div class="fg"><label class="fl">Dernière commande</label><input class="fi" type="date" id="fdcmd" value="'+(d.derniere_commande||'')+'"></div>',!!id);
 }
 function editStock(id){mStock(Number(id));}
 function cmdStock(id){id=Number(id);var s=D.stock.find(function(x){return x.id===id;});if(!s)return;var q=prompt('Quantité reçue pour '+s.ref+' ?','');if(!q||isNaN(Number(q))||Number(q)<=0)return;s.qte=s.qte+Number(q);s.derniere_commande=todayStr();s.nb_commandes=(s.nb_commandes||0)+1;checkAllPiecesStatut();save();draw(PAGE,LS);}
@@ -1903,7 +1908,7 @@ function saveModal(){
     var o={id:EID||(nextId('tech')),nom:gv('fnom'),fonction:gv('ffonc'),zone:gv('fzone'),tel:gv('ftel'),email:gv('femail'),statut:gv('fstat')};
     if(EID){var i=D.techniciens.findIndex(function(x){return x.id===EID;});if(i>=0)D.techniciens[i]=o;}else D.techniciens.push(o);
   }else if(MODE==='stock'){
-    var o={id:EID||(nextId('stock')),ref:gv('fref'),designation:gv('fdes'),categorie:gv('fcat'),qte:gn('fqte'),qte_min:gn('fmin'),prix:gn('fprix'),fournisseur:gv('ffour'),delai_reappro:gn('fdelai')||7,derniere_commande:gv('fdcmd'),nb_commandes:(EID?((D.stock.find(function(x){return x.id===EID;})||{}).nb_commandes||0):0)};
+    var o={id:EID||(nextId('stock')),ref:gv('fref'),designation:gv('fdes'),categorie:gv('fcat'),unite:gv('funite')||'Unité',qte:gn('fqte'),qte_min:gn('fmin'),prix:gn('fprix'),fournisseur:gv('ffour'),delai_reappro:gn('fdelai')||7,derniere_commande:gv('fdcmd'),nb_commandes:(EID?((D.stock.find(function(x){return x.id===EID;})||{}).nb_commandes||0):0)};
     if(EID){var i=D.stock.findIndex(function(x){return x.id===EID;});if(i>=0)D.stock[i]=o;}else D.stock.push(o);
   }
   save();closeModal();draw(PAGE,LS);
