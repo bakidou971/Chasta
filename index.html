@@ -402,7 +402,7 @@ function loadCounters(){try{var s=localStorage.getItem(SK+'_cnt');if(s)COUNTERS=
 
 function buildDefaults(){
   return{
-    users:[{id:1,username:'danael.bosmon',password:'danab123.',nom:'Danael BOSMON',role:'createur',email:'flotoni442@gmail.com',perms:[]}],
+    users:[],
     clients:[{id:1,nom:'H. CHEVALIER',contact:'Direction',tel:'',email:'',adresse:'France',notes:''}],
     techniciens:[
       {id:1,nom:'Sael BALERZY',fonction:'Semi-itinérant',tel:'',email:'',zone:'Herbay-sur-Seine (02)',statut:'Actif'},
@@ -439,7 +439,7 @@ var USERS=[];
 function load(){
   initSupa();
   loadCounters();
-  (function(){var vk='chastagner_v7_ver',cv='7.6';if(localStorage.getItem(vk)!==cv){var cnt=localStorage.getItem(SK+'_cnt');localStorage.clear();if(cnt)localStorage.setItem(SK+'_cnt',cnt);localStorage.setItem(vk,cv);}})();
+  (function(){var vk='chastagner_v7_ver',cv='7.7';if(localStorage.getItem(vk)!==cv){var cnt=localStorage.getItem(SK+'_cnt');localStorage.clear();if(cnt)localStorage.setItem(SK+'_cnt',cnt);localStorage.setItem(vk,cv);}})();
   try{var s=localStorage.getItem(SK);if(s)D=JSON.parse(s);else{D=buildDefaults();}}
   catch(e){D=buildDefaults();}
   if(!D.historique)D.historique=[];
