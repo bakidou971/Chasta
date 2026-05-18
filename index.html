@@ -446,7 +446,8 @@ function load(){
   if(!D.materiels||D.materiels.length===0){D.materiels=buildDefaults().materiels;}
   if(!D.stock||D.stock.length===0){D.stock=buildDefaults().stock;}
   USERS=D.users;
-  CURRENT_USER=USERS[0];
+  /* Ne pas écraser CURRENT_USER si déjà connecté */
+  if(!CURRENT_USER)CURRENT_USER=USERS[0];
   if(D.interventions&&D.materiels){
     D.materiels.forEach(function(m){m.statut='';});
     D.interventions.forEach(function(i){syncMatStatut();});
@@ -466,11 +467,18 @@ function load(){
     loadFromSupa().then(function(ok){
       if(ok){
         USERS=D.users||USERS;
-        CURRENT_USER=USERS[0];
+        /* Rafraîchir le rôle de l'utilisateur connecté depuis la liste mise à jour */
+        if(CURRENT_USER&&CURRENT_USER.email){
+          var refreshed=USERS.find(function(u){return u.email===CURRENT_USER.email;});
+          if(refreshed){
+            CURRENT_USER=refreshed;
+            var sbRole=document.getElementById('sb-role');
+            if(sbRole)sbRole.textContent=(ROLES[refreshed.role]||{label:refreshed.role}).label;
+          }
+        }
         saveLocal();
         syncMatStatut();
         draw(PAGE,'');
-        /* Indicateur connexion */
         showSupaStatus(true);
       }
     }).catch(function(){showSupaStatus(false);});
@@ -2413,8 +2421,14 @@ if(SUPA_OK){
       if(sbName)sbName.textContent=nom;
       if(sbAv)sbAv.textContent=initiales;
       var localUser=(USERS||[]).find(function(u){return u.email===user.email||u.username===user.email;});
-      if(localUser){CURRENT_USER=localUser;if(sbRole)sbRole.textContent=(ROLES[localUser.role]||{label:'—'}).label;}
-      else{CURRENT_USER={id:0,nom:nom,email:user.email,role:'createur'};if(sbRole)sbRole.textContent='Créateur';}
+      if(localUser){
+        CURRENT_USER=localUser;
+        if(sbRole)sbRole.textContent=(ROLES[localUser.role]||{label:'—'}).label;
+      } else {
+        /* Pas encore dans USERS locaux — attendre le chargement Supabase */
+        CURRENT_USER={id:0,nom:nom,email:user.email,role:'technicien'};
+        if(sbRole)sbRole.textContent='Chargement…';
+      }
       applySidebarPerms();
       draw(PAGE,'');
     } else {
