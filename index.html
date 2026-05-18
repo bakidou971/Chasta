@@ -192,6 +192,26 @@ textarea.fi{resize:vertical;}
 </head>
 <body>
 
+<div id="login-overlay" style="display:flex;position:fixed;inset:0;z-index:9999;background:#f0efe9;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,sans-serif">
+  <div style="background:#fff;border:1px solid #e4e3db;border-radius:16px;padding:40px;width:100%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.08)">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#1a1a18">Chastagner Location SAV</div>
+      <div style="font-size:11px;color:#6b7280;margin-top:4px;text-transform:uppercase;letter-spacing:.5px">GMAO Maintenance</div>
+    </div>
+    <div id="login-error" style="display:none;background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:16px"></div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#6b7280;display:block;margin-bottom:6px">Email</label>
+      <input id="login-email" type="email" placeholder="votre@email.com" style="width:100%;padding:10px 14px;border:1px solid #e4e3db;border-radius:8px;font-size:13px;box-sizing:border-box;outline:none">
+    </div>
+    <div style="margin-bottom:22px">
+      <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#6b7280;display:block;margin-bottom:6px">Mot de passe</label>
+      <input id="login-pass" type="password" placeholder="••••••••" style="width:100%;padding:10px 14px;border:1px solid #e4e3db;border-radius:8px;font-size:13px;box-sizing:border-box;outline:none" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button onclick="doLogin()" style="width:100%;padding:12px;background:#1a1a18;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.3px">Connexion</button>
+    <div id="login-loading" style="display:none;text-align:center;margin-top:12px;font-size:11px;color:#6b7280">Connexion en cours…</div>
+  </div>
+</div>
+
 <div class="app" style="display:flex">
   <div class="sb">
     <div class="sb-brand">
@@ -213,6 +233,9 @@ textarea.fi{resize:vertical;}
       <div class="ni" id="ni-stock" onclick="goPage('stock',this)"><span class="ni-dot"></span>Pièces détachées</div>
       <div class="sb-sec">Administration</div>
       <div class="ni" id="ni-settings" onclick="goPage('settings',this)"><span class="ni-dot"></span>Réglages</div>
+    </div>
+    <div style="padding:8px 14px;border-top:1px solid var(--bdr)">
+      <button onclick="doLogout()" style="width:100%;padding:7px 10px;background:var(--redbg);color:var(--redtxt);border:1px solid #fca5a5;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer">Se déconnecter</button>
     </div>
     <div class="sb-user">
       <div class="av" id="sb-av">?</div>
@@ -359,6 +382,64 @@ function save(){
   saveLocal();
   if(SUPA_OK){saveToSupa().catch(function(e){console.warn('Supabase save error',e);});}
 }
+function showLoginOverlay(msg){
+  var ov=document.getElementById('login-overlay');if(ov)ov.style.display='flex';
+  var err=document.getElementById('login-error');
+  if(err){err.style.display=msg?'block':'none';err.textContent=msg||'';}
+  var em=document.getElementById('login-email');if(em)em.value='';
+  var ps=document.getElementById('login-pass');if(ps)ps.value='';
+  var ldg=document.getElementById('login-loading');if(ldg)ldg.style.display='none';
+  var btn=document.querySelector('#login-overlay button');if(btn)btn.disabled=false;
+}
+function hideLoginOverlay(){
+  var ov=document.getElementById('login-overlay');if(ov)ov.style.display='none';
+}
+async function doLogin(){
+  var email=(document.getElementById('login-email')||{}).value||'';
+  var pass=(document.getElementById('login-pass')||{}).value||'';
+  if(!email||!pass){showLoginOverlay('Veuillez remplir tous les champs.');return;}
+  var btn=document.querySelector('#login-overlay button');
+  var ldg=document.getElementById('login-loading');
+  if(btn)btn.disabled=true;
+  if(ldg)ldg.style.display='block';
+  try{
+    var result=await supa.auth.signInWithPassword({email:email,password:pass});
+    if(result.error){
+      showLoginOverlay('Erreur : '+result.error.message);
+      return;
+    }
+    /* Connexion réussie */
+    var user=result.data.user;
+    hideLoginOverlay();
+    /* Mettre à jour sidebar */
+    var nom=(user.user_metadata&&user.user_metadata.full_name)||user.email||'?';
+    var initiales=nom.split(' ').map(function(w){return w[0]||'';}).slice(0,2).join('').toUpperCase()||'?';
+    var sbName=document.getElementById('sb-name');
+    var sbAv=document.getElementById('sb-av');
+    var sbRole=document.getElementById('sb-role');
+    if(sbName)sbName.textContent=nom;
+    if(sbAv)sbAv.textContent=initiales;
+    /* Trouver le rôle dans USERS */
+    var localUser=(USERS||[]).find(function(u){return u.email===user.email||u.username===user.email;});
+    if(localUser){
+      CURRENT_USER=localUser;
+      if(sbRole)sbRole.textContent=(ROLES[localUser.role]||{label:localUser.role||'—'}).label;
+    } else {
+      CURRENT_USER={id:0,nom:nom,email:user.email,role:'createur'};
+      if(sbRole)sbRole.textContent='Créateur';
+    }
+    applySidebarPerms();
+    draw(PAGE,'');
+  }catch(e){
+    showLoginOverlay('Erreur inattendue : '+(e.message||e));
+  }
+}
+async function doLogout(){
+  await supa.auth.signOut();
+  CURRENT_USER=null;
+  showLoginOverlay();
+}
+
 function showSupaStatus(ok){
   var el=document.getElementById('supa-status');
   if(!el)return;
@@ -395,9 +476,40 @@ function durText(i){if(!i.date_debut)return '—';var d2s=i.date_cloture||i.date
 function durMinutes(i){if(!i.date_debut)return 0;var d2s=i.date_cloture||i.date_fin;if(!d2s)return 0;var t1=i.heure_debut||'08:00',t2=i.date_cloture?(i.heure_cloture||'17:00'):(i.heure_fin||'17:00');return Math.max(0,Math.round((new Date(d2s+'T'+t2)-new Date(i.date_debut+'T'+t1))/(1000*60)));}
 function avgDurText(m){if(!m)return '—';var d=Math.floor(m/1440),h=Math.floor((m%1440)/60),mn=Math.round(m%60);if(d>0&&h>0)return d+' j. '+h+'h';if(d>0)return d+' j.';if(h>0)return h+'h';return mn+'min';}
 function todayStr(){return new Date().toISOString().split('T')[0];}
-function hasPerm(){return true;}
-function roleBadge(r){return '<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;background:#eff6ff;color:#2563eb">'+escH(r||'—')+'</span>';}
-function applySidebarPerms(){}
+var ROLES={
+  createur:    {label:'Créateur',    color:'#7c3aed'},
+  responsable: {label:'Responsable', color:'#2563eb'},
+  technicien:  {label:'Technicien',  color:'#0891b2'},
+  commercial:  {label:'Commercial',  color:'#d97706'},
+  admin:       {label:'Administrateur',color:'#16a34a'}
+};
+function getRole(){return CURRENT_USER&&CURRENT_USER.role?CURRENT_USER.role:'createur';}
+function hasPerm(perm){
+  var r=getRole();if(r==='createur')return true;
+  var perms={
+    'create_inter':    ['responsable'],
+    'edit_inter':      ['responsable','technicien'],
+    'delete_inter':    ['responsable'],
+    'close_inter':     ['responsable'],
+    'assign_inter':    ['responsable'],
+    'view_analytics':  ['responsable'],
+    'view_stock':      ['responsable','admin'],
+    'order_stock':     ['responsable'],
+    'edit_stock':      ['admin'],
+    'edit_materiels':  ['admin'],
+    'edit_clients':    ['admin'],
+    'edit_techniciens':['admin'],
+    'manage_users':    ['admin'],
+    'change_devis_stat':['responsable','commercial'],
+    'view_planning':   ['responsable','technicien'],
+  };
+  return perms[perm]?perms[perm].indexOf(r)>=0:true;
+}
+function roleBadge(r){var i=ROLES[r]||{label:r,color:'#aaa'};return'<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;background:'+i.color+'18;color:'+i.color+';border:1px solid '+i.color+'44">'+i.label+'</span>';}
+function applySidebarPerms(){
+  var map={'ni-analytics':'view_analytics','ni-stock':'view_stock','ni-settings':'manage_users','ni-planning':'view_planning'};
+  Object.keys(map).forEach(function(id){var el=document.getElementById(id);if(el)el.style.display=hasPerm(map[id])?'':'none';});
+}
 
 function getPrio(i){
   if(!i.date_fin)return{label:'Sans échéance',cls:'b-gray',wd:null,pct:0};
@@ -2032,7 +2144,32 @@ function saveModal(){
    BOOT
 ================================================================ */
 load();
-draw(PAGE,'');
+/* Vérifier session Supabase */
+if(SUPA_OK){
+  supa.auth.getSession().then(function(res){
+    if(res.data&&res.data.session){
+      var user=res.data.session.user;
+      hideLoginOverlay();
+      var nom=(user.user_metadata&&user.user_metadata.full_name)||user.email||'?';
+      var initiales=nom.split(' ').map(function(w){return w[0]||'';}).slice(0,2).join('').toUpperCase()||'?';
+      var sbName=document.getElementById('sb-name');var sbAv=document.getElementById('sb-av');var sbRole=document.getElementById('sb-role');
+      if(sbName)sbName.textContent=nom;
+      if(sbAv)sbAv.textContent=initiales;
+      var localUser=(USERS||[]).find(function(u){return u.email===user.email||u.username===user.email;});
+      if(localUser){CURRENT_USER=localUser;if(sbRole)sbRole.textContent=(ROLES[localUser.role]||{label:'—'}).label;}
+      else{CURRENT_USER={id:0,nom:nom,email:user.email,role:'createur'};if(sbRole)sbRole.textContent='Créateur';}
+      applySidebarPerms();
+      draw(PAGE,'');
+    } else {
+      showLoginOverlay();
+    }
+  });
+  supa.auth.onAuthStateChange(function(event){
+    if(event==='SIGNED_OUT')showLoginOverlay();
+  });
+} else {
+  showLoginOverlay('Impossible de se connecter à Supabase.');
+}
 </script>
 
 </body>
