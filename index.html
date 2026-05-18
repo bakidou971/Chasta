@@ -197,10 +197,57 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sbar:hover{opacity:1;}
 .perm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
 .perm-item{display:flex;align-items:center;gap:6px;font-size:11px;}
+/* ── LOADER ── */
+#app-loader{position:fixed;inset:0;background:var(--bg1);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--sp-m);transition:opacity .3s ease;}
+#app-loader.fade-out{opacity:0;pointer-events:none;}
+.loader-logo{width:48px;height:48px;background:var(--blue);border-radius:14px;display:flex;align-items:center;justify-content:center;animation:loader-pulse 1.5s ease-in-out infinite;}
+@keyframes loader-pulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(30,64,175,.3);}50%{transform:scale(1.05);box-shadow:0 0 0 12px rgba(30,64,175,0);}}
+.loader-bar{width:180px;height:3px;background:var(--bg2);border-radius:99px;overflow:hidden;}
+.loader-bar-fill{height:100%;background:linear-gradient(90deg,var(--blue),#60a5fa);border-radius:99px;animation:loader-slide 1.4s ease-in-out infinite;}
+@keyframes loader-slide{0%{width:0%;margin-left:0;}50%{width:60%;margin-left:20%;}100%{width:0%;margin-left:100%;}}
+.loader-text{font-size:11px;color:var(--txt2);font-weight:600;letter-spacing:.5px;}
+
+/* ── TOASTS ── */
+#toast-container{position:fixed;bottom:24px;right:24px;z-index:99998;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.toast{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:var(--rl);font-size:12px;font-weight:600;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.15);pointer-events:auto;animation:toast-in .25s ease;max-width:320px;border-left:4px solid rgba(255,255,255,.3);}
+.toast.removing{animation:toast-out .25s ease forwards;}
+@keyframes toast-in{from{opacity:0;transform:translateX(20px) scale(.95);}to{opacity:1;transform:none;}}
+@keyframes toast-out{to{opacity:0;transform:translateX(20px) scale(.95);}}
+.toast.success{background:linear-gradient(135deg,#16a34a,#15803d);}
+.toast.error{background:linear-gradient(135deg,#dc2626,#b91c1c);}
+.toast.info{background:linear-gradient(135deg,#1e40af,#1d4ed8);}
+.toast.warning{background:linear-gradient(135deg,#d97706,#b45309);}
+.toast-icon{font-size:15px;flex-shrink:0;}
+.toast-msg{flex:1;line-height:1.4;}
+
+/* ── TIMELINE ── */
+.timeline{padding:var(--sp-m);display:flex;flex-direction:column;gap:0;}
+.tl-item{display:flex;gap:var(--sp-m);position:relative;padding-bottom:var(--sp-m);}
+.tl-item:last-child{padding-bottom:0;}
+.tl-left{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:32px;}
+.tl-dot{width:12px;height:12px;border-radius:50%;border:2px solid;flex-shrink:0;background:var(--bg1);z-index:1;}
+.tl-line{width:2px;background:var(--bdr);flex:1;margin-top:4px;}
+.tl-item:last-child .tl-line{display:none;}
+.tl-content{flex:1;padding-top:1px;}
+.tl-action{font-size:11px;font-weight:700;color:var(--txt);}
+.tl-detail{font-size:10px;color:var(--txt2);margin-top:2px;}
+.tl-meta{font-size:9px;color:var(--txt3);margin-top:3px;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+
+<!-- Loader -->
+<div id="app-loader">
+  <div class="loader-logo">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 4v4l3 2"/></svg>
+  </div>
+  <div class="loader-bar"><div class="loader-bar-fill"></div></div>
+  <div class="loader-text">Chargement en cours…</div>
+</div>
+
+<!-- Toasts -->
+<div id="toast-container"></div>
 
 <div id="login-overlay" style="display:flex;position:fixed;inset:0;z-index:9999;background:#f0efe9;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,sans-serif">
   <div style="background:#fff;border:1px solid #e4e3db;border-radius:16px;padding:40px;width:100%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.08)">
@@ -411,6 +458,7 @@ function load(){
   saveLocal();
   draw(PAGE,'');
   applySidebarPerms();
+  hideLoader();
   /* Charger depuis Supabase en arrière-plan */
   if(SUPA_OK){
     loadFromSupa().then(function(ok){
@@ -426,10 +474,11 @@ function load(){
     }).catch(function(){showSupaStatus(false);});
   }
 }
-function saveLocal(){D.users=USERS;try{localStorage.setItem(SK,JSON.stringify(D));}catch(e){}}
+function saveLocal(){D.users=USERS;D.journal=JOURNAL;try{localStorage.setItem(SK,JSON.stringify(D));}catch(e){}}
 function save(){
   saveLocal();
-  if(SUPA_OK){saveToSupa().catch(function(e){console.warn('Supabase save error',e);});}
+  toast('Données sauvegardées','success',2000);
+  if(SUPA_OK){saveToSupa().catch(function(e){console.warn('Supabase save error',e);toast('Erreur synchronisation Supabase','warning');});}
 }
 function showLoginOverlay(msg){
   var ov=document.getElementById('login-overlay');if(ov)ov.style.display='flex';
@@ -487,6 +536,25 @@ async function doLogout(){
   await supa.auth.signOut();
   CURRENT_USER=null;
   showLoginOverlay();
+}
+
+/* ── TOAST NOTIFICATIONS ── */
+function toast(msg,type,duration){
+  type=type||'success';duration=duration||3000;
+  var icons={success:'✓',error:'✕',info:'i',warning:'⚠'};
+  var tc=document.getElementById('toast-container');if(!tc)return;
+  var el=document.createElement('div');
+  el.className='toast '+type;
+  el.innerHTML='<span class="toast-icon">'+icons[type]+'</span><span class="toast-msg">'+msg+'</span>';
+  tc.appendChild(el);
+  setTimeout(function(){el.classList.add('removing');setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},250);},duration);
+}
+
+/* ── LOADER ── */
+function hideLoader(){
+  var l=document.getElementById('app-loader');if(!l)return;
+  l.classList.add('fade-out');
+  setTimeout(function(){if(l.parentNode)l.parentNode.removeChild(l);},350);
 }
 
 function showSupaStatus(ok){
@@ -898,6 +966,7 @@ function rInter(f){
       '<td>'+(i.technicien?escH(i.technicien):'<span style="color:var(--txt3)">—</span>')+'</td>'+
       '<td style="font-size:11px">'+(tot?eur(tot):'—')+'</td>'+
       '<td style="white-space:nowrap">'+
+        '<button class="bs" style="font-size:10px;padding:3px 7px;margin-right:3px" onclick="viewInter('+i.id+')">Détail</button>'+
         '<button class="bs" style="font-size:10px;padding:3px 7px;margin-right:3px" onclick="editInter('+i.id+')">Modifier</button>'+
         '<button class="bg-btn" style="font-size:10px;padding:3px 7px;margin-right:3px" onclick="cloreInter('+i.id+')" '+(closeOk?'':'disabled title="'+closeTitle+'"')+'>✓ Clore</button>'+
         '<button style="font-size:10px;padding:3px 7px;background:var(--redbg);color:var(--redtxt);border:1px solid #fca5a5;border-radius:var(--r);cursor:pointer" onclick="delInter('+i.id+')" title="Supprimer">✕</button>'+
@@ -2097,7 +2166,54 @@ function mInter(id){
   makeAC('fpiece-in','fpiece-drop',stk,null);
   document.getElementById('fpiece-in').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();addPieceInput();}});
 }
-function editInter(id){mInter(id);}
+function viewInter(id){
+  var i=D.interventions.find(function(x){return x.id===id;})||D.historique.find(function(x){return x.id===id;});
+  if(!i)return;
+  var ref=escH(i.article)+(i.serie?' ('+i.serie+')':'');
+  /* Timeline — actions du journal liées à cette intervention */
+  var entries=JOURNAL.filter(function(e){return e.inter_ref===ref||e.inter_ref.indexOf(escH(i.article))>=0;});
+  var tlHTML=entries.length?entries.map(function(e){
+    var at=ACTION_TYPES[e.type]||{label:e.type,color:'#aaa'};
+    var d=new Date(e.date);
+    var ds=d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    return'<div class="tl-item">'+
+      '<div class="tl-left"><div class="tl-dot" style="border-color:'+at.color+';background:'+at.color+'18"></div><div class="tl-line"></div></div>'+
+      '<div class="tl-content">'+
+        '<div class="tl-action" style="color:'+at.color+'">'+at.label+'</div>'+
+        '<div class="tl-detail">'+escH(e.detail)+'</div>'+
+        '<div class="tl-meta">'+ds+' — '+escH(e.user)+'</div>'+
+      '</div>'+
+    '</div>';
+  }).join(''):'<div style="color:var(--txt3);font-size:11px;padding:8px 0">Aucune activité enregistrée</div>';
+
+  /* Pièces */
+  var piecesHTML=(i.pieces&&i.pieces.length)?i.pieces.map(function(p){
+    return'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:11px">'+
+      '<span style="font-weight:600">'+escH(p.ref)+' — '+escH(p.nom)+'</span>'+
+      '<span style="color:var(--txt2)">'+p.qte+' '+escH(p.unite||'Unité')+'</span>'+
+    '</div>';
+  }).join(''):'<div style="color:var(--txt3);font-size:11px">Aucune pièce</div>';
+
+  var body=
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-m);margin-bottom:var(--sp-m)">'+
+      '<div><div class="fl">Article</div><div style="font-weight:700;font-size:13px">'+escH(i.article)+'</div></div>'+
+      '<div><div class="fl">N° Série</div><div style="font-family:monospace;font-size:12px">'+escH(i.serie||'—')+'</div></div>'+
+      '<div><div class="fl">Client</div><div style="font-weight:600">'+escH(i.client||'—')+'</div></div>'+
+      '<div><div class="fl">Technicien</div><div>'+escH(i.technicien||'—')+'</div></div>'+
+      '<div><div class="fl">Statut</div>'+bstat(i.statut)+'</div>'+
+      '<div><div class="fl">Priorité</div>'+prioBdg(i)+'</div>'+
+      '<div><div class="fl">Début</div><div>'+escH(i.date_debut||'—')+'</div></div>'+
+      '<div><div class="fl">Échéance</div><div>'+escH(i.date_fin||'—')+'</div></div>'+
+    '</div>'+
+    (i.description?'<div style="margin-bottom:var(--sp-m)"><div class="fl">Description</div><div style="font-size:12px;color:var(--txt2);padding:10px 12px;background:var(--bg2);border-radius:var(--r)">'+escH(i.description)+'</div></div>':'')+
+    '<div style="margin-bottom:var(--sp-m)"><div class="fl" style="margin-bottom:8px">Pièces utilisées</div>'+piecesHTML+'</div>'+
+    '<div><div class="fl" style="margin-bottom:8px">Historique d\'activité</div><div class="timeline">'+tlHTML+'</div></div>';
+
+  MODE='view';EID=id;
+  openModal('Intervention — '+ref,body,false);
+}
+
+
 function autoFin(){var deb=document.getElementById('fdeb');var fin=document.getElementById('dfin');if(deb&&fin&&deb.value)fin.value=addWorkdays(deb.value,10);}
 
 /* ================================================================
