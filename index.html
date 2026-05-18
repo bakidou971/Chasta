@@ -156,11 +156,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .modal-ftr{padding:12px var(--sp-m);border-top:1px solid var(--bdr);display:flex;gap:var(--sp-s);justify-content:flex-end;background:var(--bg2);}
 
 /* ── PLANNING ── */
-.plan-grid{display:grid;grid-template-columns:120px repeat(7,1fr);gap:1px;background:var(--bdr);}
-.plan-cell{background:var(--bg1);padding:6px 8px;min-height:48px;position:relative;}
-.plan-hdr{background:var(--bg2);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--txt2);text-align:center;padding:8px 4px;}
-.plan-tech{background:var(--bg2);font-size:10px;font-weight:700;padding:8px;display:flex;align-items:center;}
-.plan-ev{border-radius:5px;padding:3px 7px;font-size:9px;font-weight:700;margin-bottom:3px;cursor:default;border-left:3px solid;}
+.plan-grid{display:grid;grid-template-columns:140px repeat(7,1fr);gap:1px;background:var(--bdr);}
+.plan-cell{background:var(--bg1);padding:8px;min-height:56px;position:relative;}
+.plan-hdr{background:var(--bg2);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--txt2);text-align:center;padding:10px 6px;line-height:1.6;}
+.plan-tech{background:var(--bg2);font-size:10px;font-weight:700;padding:10px 12px;display:flex;align-items:center;}
+.plan-ev{border-radius:5px;padding:4px 8px;font-size:9px;font-weight:700;margin-bottom:4px;cursor:default;border-left:3px solid;line-height:1.4;}
 
 /* ── FILTRES ── */
 .filter-bar{display:flex;flex-wrap:wrap;gap:var(--sp-s);align-items:center;padding:var(--sp-s) var(--sp-m);border-bottom:1px solid var(--bdr);background:var(--bg2);}
@@ -300,7 +300,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="ni" id="ni-settings" onclick="goPage('settings',this)"><span class="ni-dot"></span>Réglages</div>
     </div>
     <div style="padding:8px 14px;border-top:1px solid var(--bdr)">
-      <button onclick="doLogout()" style="width:100%;padding:7px 10px;background:var(--redbg);color:var(--redtxt);border:1px solid #fca5a5;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer">Se déconnecter</button>
+      <button onclick="doLogout()" style="width:100%;padding:7px 10px;background:var(--redbg);color:var(--redtxt);border:1px solid #fca5a5;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;margin-bottom:6px">Se déconnecter</button>
+      <button onclick="save();toast('Données sauvegardées','success')" style="width:100%;padding:7px 10px;background:var(--greenbg);color:var(--greentxt);border:1px solid #86efac;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer">Enregistrer</button>
     </div>
     <div class="sb-user">
       <div class="av" id="sb-av">?</div>
@@ -1300,7 +1301,19 @@ async function pushAllToSupa(){
 
 async function saveToSupa(){
   if(!SUPA_OK)return;
-  await pushAllToSupa();
+  /* Sync chaque table — upsert uniquement, les suppressions sont gérées explicitement */
+  var tables=[
+    ['interventions',D.interventions],
+    ['historique',D.historique],
+    ['materiels',D.materiels],
+    ['clients',D.clients],
+    ['techniciens',D.techniciens],
+    ['stock',D.stock],
+    ['users',D.users]
+  ];
+  for(var t=0;t<tables.length;t++){
+    if(tables[t][1]&&tables[t][1].length)await supaUpsert(tables[t][0],tables[t][1]);
+  }
 }
 
 var JOURNAL_TYPE_FILTER='';
@@ -1927,15 +1940,16 @@ function delInter(id){
   var inter=D.interventions.find(function(x){return x.id===id;});
   if(inter)logAction('inter_delete','Intervention supprimée',escH(inter.article)+(inter.serie?' ('+inter.serie+')':''));
   D.interventions=D.interventions.filter(function(x){return x.id!==id;});
-  /* Reset materiel statut if no other active intervention for this serie */
   if(inter&&inter.serie){
     var stillActive=D.interventions.find(function(x){return x.serie===inter.serie;});
-    if(!stillActive){
-      var mat=D.materiels.find(function(m){return m.serie===inter.serie;});
-      if(mat)mat.statut='';
-    }
+    var stillInHist=D.historique.find(function(x){return x.serie===inter.serie;});
+    if(!stillActive&&!stillInHist){var mat=D.materiels.find(function(m){return m.serie===inter.serie;});if(mat)mat.statut='';}
   }
-  save();draw(PAGE,LS);
+  saveLocal();
+  /* Supprimer explicitement dans Supabase */
+  if(SUPA_OK){supaDelete('interventions',id).then(function(){toast('Intervention supprimée','success');}).catch(function(){toast('Erreur suppression Supabase','error');});}
+  else{toast('Intervention supprimée','success');}
+  syncMatStatut();draw(PAGE,LS);
 }
 function showOverdue(){
   var ov=D.interventions.filter(function(i){var p=getPrio(i);return p.wd!==null&&p.wd<=0;});
