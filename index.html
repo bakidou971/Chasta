@@ -1721,30 +1721,29 @@ function rStock(f){
 
 function rSettings(){
   var userRows=USERS.map(function(u){
-    var isAdmin=u.role==='admin';
+    var isCreateur=u.role==='createur';
     return'<tr>'+
-      '<td style="font-weight:700">'+escH(u.nom)+'</td>'+
-      '<td style="font-family:monospace;font-size:11px">'+escH(u.username)+'</td>'+
-      '<td style="color:var(--txt2);font-size:11px">'+(u.email?escH(u.email):'<span style="color:var(--txt3)">—</span>')+'</td>'+
+      '<td style="font-weight:700">'+escH(u.nom||'—')+'</td>'+
+      '<td style="font-family:monospace;font-size:11px;color:var(--txt2)">'+escH(u.email||'—')+'</td>'+
       '<td>'+roleBadge(u.role||'technicien')+'</td>'+
-      '<td style="color:var(--txt2);font-size:11px)">'+(u.email?escH(u.email):'<span style="color:var(--txt3)">—</span>')+'</td>'+
-      '<td><button class="bs" style="font-size:10px;padding:3px 7px" onclick="editUser('+u.id+')">Modifier</button></td></tr>';
+      '<td>'+(isCreateur?'<span style="font-size:10px;color:var(--txt3)">Non modifiable</span>':'<button class="bs" style="font-size:10px;padding:3px 7px" onclick="editUser('+u.id+')">Modifier rôle</button>')+'</td>'+
+      '<td>'+(isCreateur?'':'<button style="font-size:10px;padding:3px 7px;background:var(--redbg);color:var(--redtxt);border:1px solid #fca5a5;border-radius:var(--r);cursor:pointer" onclick="delUser('+u.id+')">Retirer</button>')+'</td>'+
+    '</tr>';
   }).join('');
-  var myEmail=CURRENT_USER&&CURRENT_USER.email?CURRENT_USER.email:'';
-  return'<div class="card" style="margin-bottom:12px"><div class="ch"><span class="ct2">Utilisateurs &amp; accès</span><button class="bp" style="font-size:11px;padding:5px 11px" onclick="newUser()">+ Nouvel utilisateur</button></div>'+
-    '<table class="tbl"><thead><tr><th>Nom</th><th>Identifiant</th><th>Email</th><th>Rôle</th><th>Droits</th><th></th></tr></thead><tbody>'+userRows+'</tbody></table></div>'+
-    '<div class="card"><div class="ch"><span class="ct2">Mon compte</span></div>'+
-    '<div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:18px">'+
-      '<div><div class="fl" style="margin-bottom:7px">Email (connexion alternative)</div>'+
-        '<input class="fi" id="my-email" placeholder="prenom@email.com" value="'+escH(myEmail)+'" style="margin-bottom:7px">'+
-        '<button class="bp" onclick="saveMyEmail()" style="font-size:11px;padding:6px 12px">Enregistrer</button>'+
-        '<div id="email-msg" style="margin-top:5px;font-size:11px"></div></div>'+
-      '<div><div class="fl" style="margin-bottom:7px">Changer mon mot de passe</div>'+
-        '<div style="position:relative;margin-bottom:7px"><input class="fi" type="password" id="my-p1" placeholder="Nouveau mot de passe" style="padding-right:36px"><button onclick="tvp(\'my-p1\')" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px">&#128065;</button></div>'+
-        '<div style="position:relative;margin-bottom:7px"><input class="fi" type="password" id="my-p2" placeholder="Confirmer" style="padding-right:36px"><button onclick="tvp(\'my-p2\')" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px">&#128065;</button></div>'+
-        '<button class="bp" onclick="saveMyPass()" style="font-size:11px;padding:6px 12px">Changer</button>'+
-        '<div id="pass-msg" style="margin-top:5px;font-size:11px"></div></div>'+
-    '</div></div>';
+  return'<div class="card" style="margin-bottom:12px">'+
+    '<div class="ch"><span class="ct2">Accès utilisateurs</span><button class="bp" style="font-size:11px;padding:5px 11px" onclick="newUser()">+ Ajouter un accès</button></div>'+
+    '<div style="padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--bdr);font-size:11px;color:var(--txt2)">Les utilisateurs doivent d\'abord être créés dans Supabase Auth. Ici vous leur assignez un rôle.</div>'+
+    '<table class="tbl"><thead><tr><th>Nom</th><th>Email (connexion)</th><th>Rôle</th><th></th><th></th></tr></thead><tbody>'+userRows+'</tbody></table>'+
+  '</div>'+
+  '<div class="card"><div class="ch"><span class="ct2">Résumé des rôles</span></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:14px">'+
+      '<div style="padding:12px;border:1px solid var(--bdr);border-radius:var(--r);border-top:2px solid #7c3aed"><div style="font-size:10px;font-weight:700;color:#7c3aed;margin-bottom:6px">CRÉATEUR</div><div style="font-size:10px;color:var(--txt2)">Accès total — unique</div></div>'+
+      '<div style="padding:12px;border:1px solid var(--bdr);border-radius:var(--r);border-top:2px solid #2563eb"><div style="font-size:10px;font-weight:700;color:#2563eb;margin-bottom:6px">RESPONSABLE</div><div style="font-size:10px;color:var(--txt2)">Créer, valider, KPIs, stock</div></div>'+
+      '<div style="padding:12px;border:1px solid var(--bdr);border-radius:var(--r);border-top:2px solid #0891b2"><div style="font-size:10px;font-weight:700;color:#0891b2;margin-bottom:6px">TECHNICIEN</div><div style="font-size:10px;color:var(--txt2)">Interventions + devis</div></div>'+
+      '<div style="padding:12px;border:1px solid var(--bdr);border-radius:var(--r);border-top:2px solid #d97706"><div style="font-size:10px;font-weight:700;color:#d97706;margin-bottom:6px">COMMERCIAL</div><div style="font-size:10px;color:var(--txt2)">Voir interventions, statut devis</div></div>'+
+      '<div style="padding:12px;border:1px solid var(--bdr);border-radius:var(--r);border-top:2px solid #16a34a"><div style="font-size:10px;font-weight:700;color:#16a34a;margin-bottom:6px">ADMIN</div><div style="font-size:10px;color:var(--txt2)">Référentiels, utilisateurs</div></div>'+
+    '</div>'+
+  '</div>';
 }
 function delHist(id){
   if(!confirm('Supprimer définitivement cette intervention de l\'historique ?'))return;
@@ -2073,31 +2072,53 @@ function editStock(id){mStock(Number(id));}
 function cmdStock(id){id=Number(id);var s=D.stock.find(function(x){return x.id===id;});if(!s)return;var q=prompt('Quantité reçue pour '+s.ref+' ?','');if(!q||isNaN(Number(q))||Number(q)<=0)return;s.qte=s.qte+Number(q);s.derniere_commande=todayStr();s.nb_commandes=(s.nb_commandes||0)+1;checkAllPiecesStatut();save();draw(PAGE,LS);}
 
 /* USERS */
-function newUser(){editUser(null);}
+function newUser(){
+  MODE='user';EID=null;
+  var roleO=['responsable','technicien','commercial','admin'].map(function(r){
+    return'<option value="'+r+'">'+ROLES[r].label+'</option>';
+  }).join('');
+  openModal('Ajouter un accès',
+    '<div style="background:var(--bg2);border-radius:var(--r);padding:10px 12px;font-size:11px;color:var(--txt2);margin-bottom:14px">'+
+    'L\'utilisateur doit d\'abord avoir un compte dans Supabase Auth (créé par vous). Entrez son email exact.</div>'+
+    '<div class="fg"><label class="fl">Nom complet</label><input class="fi" id="u-nom" placeholder="Prénom NOM"></div>'+
+    '<div class="fg"><label class="fl">Email (identique à Supabase Auth)</label><input class="fi" id="u-email" type="email" placeholder="prenom@email.com"></div>'+
+    '<div class="fg"><label class="fl">Rôle</label><select class="fi" id="u-role">'+roleO+'</select></div>',
+    false);
+}
 function editUser(id){
-  var u=id?USERS.find(function(x){return x.id===id;}):{};
-  var body='<div class="fg"><label class="fl">Nom complet</label><input class="fi" id="u-nom" value="'+escH(u.nom||'')+'"></div>'+
-    '<div class="fg2"><div class="fg"><label class="fl">Identifiant</label><input class="fi" id="u-user" value="'+escH(u.username||'')+'"></div>'+
-    '<div class="fg"><label class="fl">Email</label><input class="fi" id="u-email" type="email" value="'+escH(u.email||'')+'"></div></div>'+
-    '<div class="fg"><label class="fl">Mot de passe</label><div style="position:relative"><input class="fi" type="password" id="u-pass" placeholder="'+(id?'Laisser vide = inchangé':'Définir un mot de passe')+'" value="" style="padding-right:36px"><button onclick="tvp(\'u-pass\')" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px">&#128065;</button></div></div>'+
-    '<div class="fg"><label class="fl">Rôle</label><select class="fi" id="u-role"><option'+(u.role==='technicien'?' selected':'')+' value="technicien">Technicien</option><option'+(u.role==='responsable'?' selected':'')+' value="responsable">Responsable</option><option'+(u.role==='commercial'?' selected':'')+' value="commercial">Commercial</option><option'+(u.role==='admin'?' selected':'')+' value="admin">Administrateur</option><option'+(u.role==='createur'?' selected':'')+' value="createur">Créateur</option></select></div>'+
-    '<div style="background:var(--bg2);border-radius:var(--r);padding:10px 12px;font-size:11px;color:var(--txt2)">'+
-    '<strong style="color:var(--txt);display:block;margin-bottom:6px">Accès selon le rôle :</strong>'+
-    '<div>🔧 <strong>Technicien</strong> — Modifier ses interventions + devis</div>'+
-    '<div>👔 <strong>Responsable</strong> — Créer interventions, valider, KPIs, stock</div>'+
-    '<div>💼 <strong>Commercial</strong> — Voir interventions, changer statut devis</div>'+
-    '<div>⚙️ <strong>Administrateur</strong> — Gérer utilisateurs, matériels, clients, pièces</div>'+
-    '<div>👑 <strong>Créateur</strong> — Accès total</div>'+
-    '</div>';
-  MODE='user';EID=id||null;
-  openModal(id?'Modifier utilisateur':'Nouvel utilisateur',body,id&&u.id!==1);
+  var u=USERS.find(function(x){return x.id===id;});if(!u)return;
+  if(u.role==='createur'){alert('Le créateur ne peut pas être modifié.');return;}
+  MODE='user';EID=id;
+  var roleO=['responsable','technicien','commercial','admin'].map(function(r){
+    return'<option value="'+r+'"'+(u.role===r?' selected':'')+'>'+ROLES[r].label+'</option>';
+  }).join('');
+  openModal('Modifier le rôle — '+escH(u.nom),
+    '<div class="fg"><label class="fl">Nom</label><input class="fi" id="u-nom" value="'+escH(u.nom||'')+'"></div>'+
+    '<div class="fg"><label class="fl">Email</label><input class="fi" id="u-email" type="email" value="'+escH(u.email||'')+'" readonly style="opacity:.6"></div>'+
+    '<div class="fg"><label class="fl">Rôle</label><select class="fi" id="u-role">'+roleO+'</select></div>',
+    true);
 }
 function saveUser(){
-  var nom=gv('u-nom'),uname=gv('u-user'),pass=gv('u-pass'),role=gv('u-role'),email=gv('u-email');
-  if(!nom||!uname){alert('Nom et identifiant requis.');return;}
-  if(EID){var u=USERS.find(function(x){return x.id===EID;});u.nom=nom;u.username=uname;u.role=role;u.email=email;if(pass)u.password=pass;}
-  else USERS.push({id:nextId('user'),nom:nom,username:uname,password:pass,role:role,email:email});
+  var nom=gv('u-nom'),email=gv('u-email'),role=gv('u-role');
+  if(!nom||!email){alert('Nom et email requis.');return;}
+  /* Vérifier unicité créateur */
+  if(role==='createur'){alert('Il ne peut y avoir qu\'un seul créateur.');return;}
+  if(EID){
+    var u=USERS.find(function(x){return x.id===EID;});
+    if(u){u.nom=nom;u.role=role;}
+  } else {
+    if(USERS.find(function(u){return u.email===email;})){alert('Cet email est déjà enregistré.');return;}
+    USERS.push({id:nextId('user'),nom:nom,email:email,role:role});
+  }
   save();closeModal();draw('settings','');
+}
+function delUser(id){
+  var u=USERS.find(function(x){return x.id===id;});
+  if(!u)return;
+  if(u.role==='createur'){alert('Impossible de supprimer le créateur.');return;}
+  if(!confirm('Retirer l\'accès de '+u.nom+' ?'))return;
+  USERS=USERS.filter(function(x){return x.id!==id;});
+  save();draw('settings','');
 }
 
 /* ================================================================
