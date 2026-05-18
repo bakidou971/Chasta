@@ -439,7 +439,7 @@ var USERS=[];
 function load(){
   initSupa();
   loadCounters();
-  (function(){var vk='chastagner_v7_ver',cv='7.5';if(localStorage.getItem(vk)!==cv){var cnt=localStorage.getItem(SK+'_cnt');localStorage.clear();if(cnt)localStorage.setItem(SK+'_cnt',cnt);localStorage.setItem(vk,cv);}})();
+  (function(){var vk='chastagner_v7_ver',cv='7.6';if(localStorage.getItem(vk)!==cv){var cnt=localStorage.getItem(SK+'_cnt');localStorage.clear();if(cnt)localStorage.setItem(SK+'_cnt',cnt);localStorage.setItem(vk,cv);}})();
   try{var s=localStorage.getItem(SK);if(s)D=JSON.parse(s);else{D=buildDefaults();}}
   catch(e){D=buildDefaults();}
   if(!D.historique)D.historique=[];
@@ -470,18 +470,29 @@ function load(){
     loadFromSupa().then(function(ok){
       if(ok){
         USERS=D.users||USERS;
-        /* Rafraîchir le rôle de l'utilisateur connecté depuis la liste mise à jour */
-        if(CURRENT_USER&&CURRENT_USER.email){
-          var refreshed=USERS.find(function(u){return u.id===CURRENT_USER.id||u.email===CURRENT_USER.email;});
-          if(refreshed){
-            CURRENT_USER=refreshed;
-            var sbRole=document.getElementById('sb-role');
-            if(sbRole)sbRole.textContent=(ROLES[refreshed.role]||{label:refreshed.role}).label;
+        /* Rafraîchir le rôle depuis la session Supabase Auth active */
+        supa.auth.getSession().then(function(res){
+          if(res.data&&res.data.session){
+            var authUser=res.data.session.user;
+            var refreshed=USERS.find(function(u){
+              return u.id===authUser.id||u.email===authUser.email;
+            });
+            if(refreshed){
+              CURRENT_USER=refreshed;
+              var sbRole=document.getElementById('sb-role');
+              var sbName=document.getElementById('sb-name');
+              var sbAv=document.getElementById('sb-av');
+              if(sbRole)sbRole.textContent=(ROLES[refreshed.role]||{label:refreshed.role}).label;
+              if(sbName)sbName.textContent=refreshed.nom||authUser.email;
+              var initiales=(refreshed.nom||authUser.email).split(' ').map(function(w){return w[0]||'';}).slice(0,2).join('').toUpperCase();
+              if(sbAv)sbAv.textContent=initiales;
+            }
           }
-        }
+          applySidebarPerms();
+          draw(PAGE,'');
+        });
         saveLocal();
         syncMatStatut();
-        draw(PAGE,'');
         showSupaStatus(true);
       }
     }).catch(function(){showSupaStatus(false);});
@@ -514,7 +525,8 @@ async function doLogin(){
   if(btn)btn.disabled=true;
   if(ldg)ldg.style.display='block';
   try{
-    var result=await supa.auth.signInWithPassword({email:email,password:pass});
+    var timeoutPromise=new Promise(function(_,reject){setTimeout(function(){reject(new Error('Délai dépassé — vérifiez votre connexion'));},10000);});
+    var result=await Promise.race([supa.auth.signInWithPassword({email:email,password:pass}),timeoutPromise]);
     if(result.error){
       showLoginOverlay('Erreur : '+result.error.message);
       return;
@@ -546,9 +558,11 @@ async function doLogin(){
   }
 }
 async function doLogout(){
-  await supa.auth.signOut();
+  /* Afficher l'overlay login immédiatement */
   CURRENT_USER=null;
   showLoginOverlay();
+  /* Déconnexion Supabase en arrière-plan */
+  try{await supa.auth.signOut();}catch(e){console.warn('signOut error',e);}
 }
 
 /* ── TOAST NOTIFICATIONS ── */
