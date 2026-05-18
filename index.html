@@ -402,7 +402,7 @@ function loadCounters(){try{var s=localStorage.getItem(SK+'_cnt');if(s)COUNTERS=
 
 function buildDefaults(){
   return{
-    users:[{id:1,username:'danael.bosmon',password:'danab123.',nom:'Danael BOSMON',role:'createur',email:'',perms:[]}],
+    users:[{id:1,username:'danael.bosmon',password:'danab123.',nom:'Danael BOSMON',role:'createur',email:'flotoni442@gmail.com',perms:[]}],
     clients:[{id:1,nom:'H. CHEVALIER',contact:'Direction',tel:'',email:'',adresse:'France',notes:''}],
     techniciens:[
       {id:1,nom:'Sael BALERZY',fonction:'Semi-itinérant',tel:'',email:'',zone:'Herbay-sur-Seine (02)',statut:'Actif'},
@@ -472,7 +472,7 @@ function load(){
         USERS=D.users||USERS;
         /* Rafraîchir le rôle de l'utilisateur connecté depuis la liste mise à jour */
         if(CURRENT_USER&&CURRENT_USER.email){
-          var refreshed=USERS.find(function(u){return u.email===CURRENT_USER.email;});
+          var refreshed=USERS.find(function(u){return u.id===CURRENT_USER.id||u.email===CURRENT_USER.email;});
           if(refreshed){
             CURRENT_USER=refreshed;
             var sbRole=document.getElementById('sb-role');
@@ -531,7 +531,7 @@ async function doLogin(){
     if(sbName)sbName.textContent=nom;
     if(sbAv)sbAv.textContent=initiales;
     /* Trouver le rôle dans USERS */
-    var localUser=(USERS||[]).find(function(u){return u.email===user.email||u.username===user.email;});
+    var localUser=(USERS||[]).find(function(u){return u.id===user.id||u.email===user.email||u.username===user.email;});
     if(localUser){
       CURRENT_USER=localUser;
       if(sbRole)sbRole.textContent=(ROLES[localUser.role]||{label:localUser.role||'—'}).label;
@@ -1280,7 +1280,7 @@ async function loadFromSupa(){
       supaLoad('clients'),
       supaLoad('techniciens'),
       supaLoad('stock'),
-      supaLoad('users')
+      supaLoad('profiles')
     ]);
     var hasData=results.some(function(r){return r.length>0;});
     if(hasData){
@@ -1307,7 +1307,7 @@ async function pushAllToSupa(){
   await supaUpsert('clients',D.clients);
   await supaUpsert('techniciens',D.techniciens);
   await supaUpsert('stock',D.stock);
-  await supaUpsert('users',D.users);
+  await supaUpsert('profiles',D.users);
 }
 
 async function saveToSupa(){
@@ -1320,7 +1320,7 @@ async function saveToSupa(){
     ['clients',D.clients],
     ['techniciens',D.techniciens],
     ['stock',D.stock],
-    ['users',D.users]
+    ['profiles',D.users]
   ];
   for(var t=0;t<tables.length;t++){
     if(tables[t][1]&&tables[t][1].length)await supaUpsert(tables[t][0],tables[t][1]);
@@ -2315,9 +2315,10 @@ function newUser(){
   }).join('');
   openModal('Ajouter un accès',
     '<div style="background:var(--bg2);border-radius:var(--r);padding:10px 12px;font-size:11px;color:var(--txt2);margin-bottom:14px">'+
-    'L\'utilisateur doit d\'abord avoir un compte dans Supabase Auth (créé par vous). Entrez son email exact.</div>'+
+    'Créez d\'abord l\'utilisateur dans Supabase Auth, puis copiez son UUID ici.</div>'+
+    '<div class="fg"><label class="fl">UUID Supabase Auth</label><input class="fi" id="u-uuid" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>'+
     '<div class="fg"><label class="fl">Nom complet</label><input class="fi" id="u-nom" placeholder="Prénom NOM"></div>'+
-    '<div class="fg"><label class="fl">Email (identique à Supabase Auth)</label><input class="fi" id="u-email" type="email" placeholder="prenom@email.com"></div>'+
+    '<div class="fg"><label class="fl">Email</label><input class="fi" id="u-email" type="email" placeholder="prenom@email.com"></div>'+
     '<div class="fg"><label class="fl">Rôle</label><select class="fi" id="u-role">'+roleO+'</select></div>',
     false);
 }
@@ -2335,16 +2336,16 @@ function editUser(id){
     true);
 }
 function saveUser(){
-  var nom=gv('u-nom'),email=gv('u-email'),role=gv('u-role');
+  var nom=gv('u-nom'),email=gv('u-email'),role=gv('u-role'),uuid=gv('u-uuid')||null;
   if(!nom||!email){alert('Nom et email requis.');return;}
-  /* Vérifier unicité créateur */
   if(role==='createur'){alert('Il ne peut y avoir qu\'un seul créateur.');return;}
   if(EID){
     var u=USERS.find(function(x){return x.id===EID;});
     if(u){u.nom=nom;u.role=role;}
   } else {
     if(USERS.find(function(u){return u.email===email;})){alert('Cet email est déjà enregistré.');return;}
-    USERS.push({id:nextId('user'),nom:nom,email:email,role:role});
+    if(!uuid){alert('UUID Supabase requis.\nTrouvez-le dans Authentication → Users sur Supabase.');return;}
+    USERS.push({id:uuid,nom:nom,email:email,role:role});
   }
   save();closeModal();draw('settings','');
 }
@@ -2423,13 +2424,12 @@ if(SUPA_OK){
       var sbName=document.getElementById('sb-name');var sbAv=document.getElementById('sb-av');var sbRole=document.getElementById('sb-role');
       if(sbName)sbName.textContent=nom;
       if(sbAv)sbAv.textContent=initiales;
-      var localUser=(USERS||[]).find(function(u){return u.email===user.email||u.username===user.email;});
+      var localUser=(USERS||[]).find(function(u){return u.id===user.id||u.email===user.email||u.username===user.email;});
       if(localUser){
         CURRENT_USER=localUser;
         if(sbRole)sbRole.textContent=(ROLES[localUser.role]||{label:'—'}).label;
       } else {
-        /* Pas encore dans USERS locaux — attendre le chargement Supabase */
-        CURRENT_USER={id:0,nom:nom,email:user.email,role:'technicien'};
+        CURRENT_USER={id:user.id,nom:nom,email:user.email,role:'technicien'};
         if(sbRole)sbRole.textContent='Chargement…';
       }
       applySidebarPerms();
