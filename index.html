@@ -1321,20 +1321,19 @@ async function pushAllToSupa(){
   await supaUpsert('clients',D.clients);
   await supaUpsert('techniciens',D.techniciens);
   await supaUpsert('stock',D.stock);
-  await supaUpsert('profiles',D.users);
+  /* profiles non inclus */
 }
 
 async function saveToSupa(){
   if(!SUPA_OK)return;
-  /* Sync chaque table — upsert uniquement, les suppressions sont gérées explicitement */
   var tables=[
     ['interventions',D.interventions],
     ['historique',D.historique],
     ['materiels',D.materiels],
     ['clients',D.clients],
     ['techniciens',D.techniciens],
-    ['stock',D.stock],
-    ['profiles',D.users]
+    ['stock',D.stock]
+    /* profiles géré manuellement uniquement */
   ];
   for(var t=0;t<tables.length;t++){
     if(tables[t][1]&&tables[t][1].length)await supaUpsert(tables[t][0],tables[t][1]);
@@ -2356,12 +2355,15 @@ function saveUser(){
   if(EID){
     var u=USERS.find(function(x){return x.id===EID;});
     if(u){u.nom=nom;u.role=role;}
+    if(SUPA_OK)supaUpsert('profiles',[{id:EID,nom:nom,role:role}]);
   } else {
     if(USERS.find(function(u){return u.email===email;})){alert('Cet email est déjà enregistré.');return;}
     if(!uuid){alert('UUID Supabase requis.\nTrouvez-le dans Authentication → Users sur Supabase.');return;}
-    USERS.push({id:uuid,nom:nom,email:email,role:role});
+    var newUser={id:uuid,nom:nom,email:email,role:role};
+    USERS.push(newUser);
+    if(SUPA_OK)supaUpsert('profiles',[{id:uuid,nom:nom,role:role}]);
   }
-  save();closeModal();draw('settings','');
+  saveLocal();closeModal();draw('settings','');toast('Utilisateur enregistré','success');
 }
 function delUser(id){
   var u=USERS.find(function(x){return x.id===id;});
@@ -2369,7 +2371,8 @@ function delUser(id){
   if(u.role==='createur'){alert('Impossible de supprimer le créateur.');return;}
   if(!confirm('Retirer l\'accès de '+u.nom+' ?'))return;
   USERS=USERS.filter(function(x){return x.id!==id;});
-  save();draw('settings','');
+  if(SUPA_OK)supaDelete('profiles',id);
+  saveLocal();draw('settings','');toast('Accès retiré','success');
 }
 
 /* ================================================================
