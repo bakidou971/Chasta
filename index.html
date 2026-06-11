@@ -2249,8 +2249,7 @@ function viewInter(id){
       '<div><div class="fl">Échéance</div><div>'+escH(i.date_fin||'—')+'</div></div>'+
     '</div>'+
     (i.description?'<div style="margin-bottom:var(--sp-m)"><div class="fl">Description</div><div style="font-size:12px;color:var(--txt2);padding:10px 12px;background:var(--bg2);border-radius:var(--r)">'+escH(i.description)+'</div></div>':'')+
-    '<div style="margin-bottom:var(--sp-m)"><div class="fl" style="margin-bottom:8px">Pièces utilisées</div>'+piecesHTML+'</div>'+
-    '<div><div class="fl" style="margin-bottom:8px">Historique d\'activité</div><div class="timeline">'+tlHTML+'</div></div>';
+    '<div><div class="fl" style="margin-bottom:8px">Pièces utilisées</div>'+piecesHTML+'</div>';
 
   MODE='view';EID=id;
   openModal('Intervention — '+ref,body,false);
