@@ -414,7 +414,6 @@ function buildDefaults(){
     materiels:JSON.parse(JSON.stringify(MAT_DATA)),
     interventions:[],
     historique:[],
-    materiels:[],
         stock:[
       {id:1,ref:'CHR-200',designation:'Crochet sécurité HE200',categorie:'Accrochage',qte:8,qte_min:3,prix:42.50,fournisseur:'VERLINDE',delai_reappro:5,nb_commandes:3,derniere_commande:'2026-04-12'},
       {id:2,ref:'JH-01',designation:'Joint hydraulique Ø45mm',categorie:'Hydraulique',qte:2,qte_min:5,prix:8.90,fournisseur:'REMA',delai_reappro:7,nb_commandes:2,derniere_commande:'2026-03-20'},
@@ -439,7 +438,7 @@ var USERS=[];
 function load(){
   initSupa();
   loadCounters();
-  (function(){var vk='chastagner_v7_ver',cv='8.3';if(localStorage.getItem(vk)!==cv){var cnt=localStorage.getItem(SK+'_cnt');localStorage.clear();if(cnt)localStorage.setItem(SK+'_cnt',cnt);localStorage.setItem(vk,cv);}})();
+  (function(){var vk='chastagner_v7_ver',cv='8.4';if(localStorage.getItem(vk)!==cv){var cnt=localStorage.getItem(SK+'_cnt');localStorage.clear();if(cnt)localStorage.setItem(SK+'_cnt',cnt);localStorage.setItem(vk,cv);}})();
   try{var s=localStorage.getItem(SK);if(s)D=JSON.parse(s);else{D=buildDefaults();}}
   catch(e){D=buildDefaults();}
   if(!D.historique)D.historique=[];
