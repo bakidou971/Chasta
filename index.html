@@ -447,7 +447,7 @@ var USERS=[];
 function load(){
   initSupa();
   loadCounters();
-  (function(){var vk='chastagner_v7_ver',cv='8.1';if(localStorage.getItem(vk)!==cv){var cnt=localStorage.getItem(SK+'_cnt');localStorage.clear();if(cnt)localStorage.setItem(SK+'_cnt',cnt);localStorage.setItem(vk,cv);}})();
+  (function(){var vk='chastagner_v7_ver',cv='8.2';if(localStorage.getItem(vk)!==cv){var cnt=localStorage.getItem(SK+'_cnt');localStorage.clear();if(cnt)localStorage.setItem(SK+'_cnt',cnt);localStorage.setItem(vk,cv);}})();
   try{var s=localStorage.getItem(SK);if(s)D=JSON.parse(s);else{D=buildDefaults();}}
   catch(e){D=buildDefaults();}
   if(!D.historique)D.historique=[];
@@ -1277,9 +1277,14 @@ async function supaLoad(table){
 async function supaUpsert(table,rows){
   if(!SUPA_OK||!rows||!rows.length)return;
   try{
-    /* Nettoyer les objets avant envoi */
     var clean=rows.map(function(r){
-      var o=JSON.parse(JSON.stringify(r));
+      var o;
+      if(table==='materiels'){
+        o={id:r.id,article:r.article||'',serie:r.serie||'',client:r.client||'',marque:r.marque||'',technicien:r.technicien||'',statut:r.statut||'',localisation:r.localisation||''};
+      } else {
+        o=JSON.parse(JSON.stringify(r));
+        delete o.created_at;delete o.updated_at;
+      }
       return o;
     });
     var r=await supa.from(table).upsert(clean,{onConflict:'id'});
@@ -2457,8 +2462,8 @@ load();
 /* Timeout de sécurité — affiche le login après 8 secondes si Supabase ne répond pas */
 var bootTimeout=setTimeout(function(){
 hideLoader();
-showLoginOverlay(‘Connexion lente — réessayez’);
-},8000);
+showLoginOverlay(‘Connexion lente — réessayez ou vérifiez votre réseau’);
+},5000);
 
 if(SUPA_OK){
 supa.auth.getSession().then(function(res){
