@@ -439,7 +439,7 @@ var USERS=[];
 function load(){
   initSupa();
   loadCounters();
-  (function(){var vk='chastagner_v7_ver',cv='7.8';if(localStorage.getItem(vk)!==cv){var cnt=localStorage.getItem(SK+'_cnt');localStorage.clear();if(cnt)localStorage.setItem(SK+'_cnt',cnt);localStorage.setItem(vk,cv);}})();
+  (function(){var vk='chastagner_v7_ver',cv='7.9';if(localStorage.getItem(vk)!==cv){var cnt=localStorage.getItem(SK+'_cnt');localStorage.clear();if(cnt)localStorage.setItem(SK+'_cnt',cnt);localStorage.setItem(vk,cv);}})();
   try{var s=localStorage.getItem(SK);if(s)D=JSON.parse(s);else{D=buildDefaults();}}
   catch(e){D=buildDefaults();}
   if(!D.historique)D.historique=[];
@@ -1303,7 +1303,13 @@ async function loadFromSupa(){
     if(hasData){
       D.interventions = results[0].length ? results[0] : D.interventions;
       D.historique    = results[1].length ? results[1] : D.historique;
-      D.materiels     = results[2].length ? results[2] : D.materiels;
+      /* Matériels — toujours garder MAT_DATA comme base, Supabase peut écraser les statuts */
+      if(results[2].length){
+        /* Mettre à jour les statuts depuis Supabase mais garder les données du parc */
+        var supaStatuts={};
+        results[2].forEach(function(m){supaStatuts[m.serie]=m.statut||'';});
+        D.materiels.forEach(function(m){if(supaStatuts[m.serie]!==undefined)m.statut=supaStatuts[m.serie];});
+      }
       D.clients       = results[3].length ? results[3] : D.clients;
       D.techniciens   = results[4].length ? results[4] : D.techniciens;
       D.stock         = results[5].length ? results[5] : D.stock;
@@ -2204,8 +2210,22 @@ function mInter(id){
     '<div id="tab-devis" class="tab-pane">'+tab2+'</div>';
 
   openModal(id?'Modifier INT-'+String(id).padStart(4,'0'):'Nouvelle intervention',body,!!id);
-  makeAC('fart-in','fart-drop',articles,null);
-  makeAC('fserie-in','fserie-drop',series,function(s){var m=D.materiels.find(function(x){return x.serie===s;});if(m){var a=document.getElementById('fart-in');if(a)a.value=m.article;}});
+  makeAC('fart-in','fart-drop',articles,function(a){
+    /* Remplir série et client si un seul matériel correspond */
+    var matches=D.materiels.filter(function(x){return x.article===a;});
+    if(matches.length===1){
+      var si=document.getElementById('fserie-in');if(si)si.value=matches[0].serie;
+      var cl=document.getElementById('fcli');if(cl)cl.value=matches[0].client;
+    }
+  });
+  makeAC('fserie-in','fserie-drop',series,function(s){
+    var m=D.materiels.find(function(x){return x.serie===s;});
+    if(m){
+      var a=document.getElementById('fart-in');if(a)a.value=m.article;
+      var cl=document.getElementById('fcli');if(cl)cl.value=m.client;
+      var mq=document.getElementById('fmarq');if(mq)mq.value=m.marque||'';
+    }
+  });
   makeAC('fpiece-in','fpiece-drop',stk,null);
   document.getElementById('fpiece-in').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();addPieceInput();}});
 }
