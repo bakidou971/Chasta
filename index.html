@@ -603,6 +603,20 @@ function addWorkdays(ds,days){var d=new Date(ds),a=0;while(a<days){d.setDate(d.g
 function wdBetween(d1,d2){if(!d1||!d2)return 0;var a=new Date(d1),b=new Date(d2);if(b<=a)return 0;var c=0,cur=new Date(a);while(cur<b){cur.setDate(cur.getDate()+1);var w=cur.getDay();if(w!==0&&w!==6)c++;}return c;}
 function wdUntil(ds){if(!ds)return null;var now=new Date();now.setHours(0,0,0,0);var end=new Date(ds);end.setHours(0,0,0,0);if(end<=now)return 0;return wdBetween(now.toISOString().split('T')[0],ds);}
 function uniq(arr){var seen={},out=[];arr.forEach(function(x){if(x!=null&&!seen[x]){seen[x]=1;out.push(x);}});return out;}
+function cliZone(n){var c=D.clients.find(function(x){return x.nom===n;});return c&&c.zone||'';}
+function matZone(m){return m.localisation||cliZone(m.client);}
+function zClients(z,keep){return D.clients.filter(function(c){return !z||c.zone===z||c.nom===keep;});}
+function zTechs(z,keep){return D.techniciens.filter(function(t){return (t.statut==='Actif'&&(!z||t.zone===z))||t.nom===keep;});}
+function zMats(z){return D.materiels.filter(function(m){return !z||matZone(m)===z;});}
+function onZoneChange(){
+  var z=gv('fzone'),cl=document.getElementById('fcli'),te=document.getElementById('ftech');
+  var c0=cl.value,t0=te.value;
+  cl.innerHTML=zClients(z).map(function(c){return'<option'+(c.nom===c0?' selected':'')+' value="'+escH(c.nom)+'">'+escH(c.nom)+'</option>';}).join('');
+  te.innerHTML='<option value="">Non assigné</option>'+zTechs(z).map(function(t){return'<option'+(t.nom===t0?' selected':'')+' value="'+escH(t.nom)+'">'+escH(t.nom)+'</option>';}).join('');
+  var s=D.materiels.find(function(m){return m.serie===gv('fserie-in');});
+  if(z&&s&&matZone(s)!==z){document.getElementById('fserie-in').value='';document.getElementById('fart-in').value='';}
+}
+function editInter(id){mInter(id);}
 function calBetween(d1,d2){if(!d1||!d2)return 0;return Math.round((new Date(d2)-new Date(d1))/(1000*60*60*24));}
 function durText(i){if(!i.date_debut)return '—';var d2s=i.date_cloture||i.date_fin;if(!d2s)return '—';var t1=i.heure_debut||'08:00',t2=i.date_cloture?(i.heure_cloture||'17:00'):(i.heure_fin||'17:00');var d1dt=new Date(i.date_debut+'T'+t1),d2dt=new Date(d2s+'T'+t2);var diff=d2dt-d1dt;if(diff<=0)return '0h';var totalH=Math.floor(diff/(1000*60*60)),j=Math.floor(totalH/24),h=totalH%24;if(j===0)return h+'h';if(h===0)return j+' j.';return j+' j. '+h+'h';}
 function durMinutes(i){if(!i.date_debut)return 0;var d2s=i.date_cloture||i.date_fin;if(!d2s)return 0;var t1=i.heure_debut||'08:00',t2=i.date_cloture?(i.heure_cloture||'17:00'):(i.heure_fin||'17:00');return Math.max(0,Math.round((new Date(d2s+'T'+t2)-new Date(i.date_debut+'T'+t1))/(1000*60)));}
@@ -1168,7 +1182,7 @@ function viewHist(id){
   MODE='view';EID=id;
   document.getElementById('mtitle').textContent='Intervention archivée INT-'+String(id).padStart(4,'0');
   document.getElementById('mbody').innerHTML=body;
-  document.getElementById('mfl').innerHTML='';
+  
   document.getElementById('ov').classList.add('show');
 }
 
@@ -1639,14 +1653,14 @@ function rCli(f){
     var ni=D.interventions.filter(function(i){return i.client===c.nom;}).length;
     return'<tr>'+
       '<td style="font-size:10px;color:var(--txt2);font-family:monospace">CLI-'+String(c.id).padStart(3,'0')+'</td>'+
-      '<td style="font-weight:700">'+escH(c.nom)+'</td><td>'+escH(c.contact)+'</td>'+
+      '<td style="font-weight:700">'+escH(c.nom)+'</td><td>'+escH(c.zone||'—')+'</td><td>'+escH(c.contact)+'</td>'+
       '<td style="color:var(--txt2)">'+escH(c.tel)+'</td><td style="color:var(--txt2)">'+escH(c.email)+'</td>'+
       '<td style="color:var(--txt2)">'+escH(c.adresse)+'</td>'+
       '<td>'+bdg('b-blue',nm+' mat.')+'</td><td>'+bdg(ni?'b-amber':'b-gray',ni+' act.')+'</td>'+
       '<td><button class="bs" style="font-size:10px;padding:3px 7px" onclick="editCli('+c.id+')">Modifier</button></td></tr>';
   }).join('');
   return'<div class="card"><div class="ch"><span class="ct2">Clients</span><span class="cc">'+all.length+'</span></div>'+
-    '<table class="tbl"><thead><tr><th>ID</th><th>Nom</th><th>Contact</th><th>Tél.</th><th>Email</th><th>Adresse</th><th>Matériels</th><th>Interv.</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+    '<table class="tbl"><thead><tr><th>ID</th><th>Nom</th><th>Zone</th><th>Contact</th><th>Tél.</th><th>Email</th><th>Adresse</th><th>Matériels</th><th>Interv.</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
 /* ================================================================
@@ -1989,7 +2003,7 @@ function showOverdue(){
     '<tbody>'+rows+'</tbody></table></div>';
   document.getElementById('mtitle').textContent='Interventions en retard ('+ov.length+')';
   document.getElementById('mbody').innerHTML=body;
-  document.getElementById('mfl').innerHTML='';
+  
   document.getElementById('ov').classList.add('show');
 }
 function tvp(id){var e=document.getElementById(id);if(e)e.type=e.type==='password'?'text':'password';}
@@ -2005,7 +2019,7 @@ function makeAC(inpId,dropId,items,onSel){
   inp.addEventListener('input',function(){
     var v=inp.value.toLowerCase();drop.innerHTML='';
     if(!v){drop.classList.remove('show');return;}
-    var hits=items.filter(function(x){return x&&x.toLowerCase().indexOf(v)>=0;}).slice(0,15);
+    var hits=(typeof items==='function'?items():items).filter(function(x){return x&&x.toLowerCase().indexOf(v)>=0;}).slice(0,15);
     if(!hits.length){drop.classList.remove('show');return;}
     hits.forEach(function(h){var d=document.createElement('div');d.className='aci';d.textContent=h;d.onclick=function(){inp.value=h;drop.classList.remove('show');if(onSel)onSel(h);};drop.appendChild(d);});
     drop.classList.add('show');
@@ -2131,6 +2145,7 @@ function collectDevis(){return{statut:gv('dv-stat'),date_devis:gv('dv-date'),vgp
 function mInter(id){
   MODE='inter';EID=id||null;
   var d=id?D.interventions.find(function(x){return x.id===id;}):{};
+  var zone=d.zone||cliZone(d.client)||'';
   TMP_PIECES=d.pieces?d.pieces.map(function(p){
     if(typeof p==='object'&&p.stock_id)return p;
     /* Migration ancien format texte */
@@ -2141,8 +2156,8 @@ function mInter(id){
   DV_MO=d.devis&&d.devis.mo?JSON.parse(JSON.stringify(d.devis.mo)):[];
   var articles=uniq(D.materiels.map(function(m){return m.article;}).filter(Boolean)).sort();
   var series=D.materiels.map(function(m){return m.serie;}).filter(Boolean);
-  var cliO=D.clients.map(function(c){return'<option'+(d.client===c.nom?' selected':'')+' value="'+escH(c.nom)+'">'+escH(c.nom)+'</option>';}).join('');
-  var techO=D.techniciens.filter(function(t){return t.statut==='Actif';}).map(function(t){return'<option'+(d.technicien===t.nom?' selected':'')+' value="'+escH(t.nom)+'">'+escH(t.nom)+'</option>';}).join('');
+  var cliO=zClients(zone,d.client).map(function(c){return'<option'+(d.client===c.nom?' selected':'')+' value="'+escH(c.nom)+'">'+escH(c.nom)+'</option>';}).join('');
+  var techO=zTechs(zone,d.technicien).map(function(t){return'<option'+(d.technicien===t.nom?' selected':'')+' value="'+escH(t.nom)+'">'+escH(t.nom)+'</option>';}).join('');
   var stk=D.stock.map(function(s){return s.ref+' — '+s.designation;});
   var today=todayStr();
   var dflt_fin=d.date_debut?addWorkdays(d.date_debut,10):addWorkdays(today,10);
@@ -2153,7 +2168,7 @@ function mInter(id){
   var dvV=d.devis&&d.devis.vgp?'checked':'';
   var dvN=d.devis&&d.devis.notes?d.devis.notes:'';
 
-  var tab1='<div class="fg2">'+
+  var tab1='<div class="fg"><label class="fl">Zone</label><select class="fi" id="fzone" onchange="onZoneChange()"><option value="">Toutes zones</option>'+opts(ZONES,zone)+'</select></div>'+'<div class="fg2">'+
     '<div class="fg"><label class="fl">Article</label><div class="acw"><input class="fi" id="fart-in" placeholder="Rechercher…" value="'+escH(d.article||'')+'"><div class="acd" id="fart-drop"></div></div></div>'+
     '<div class="fg"><label class="fl">N° de série</label><div class="acw"><input class="fi" id="fserie-in" placeholder="Rechercher…" value="'+escH(d.serie||'')+'"><div class="acd" id="fserie-drop"></div></div></div>'+
   '</div>'+
@@ -2192,7 +2207,7 @@ function mInter(id){
     '<div id="tab-devis" class="tab-pane">'+tab2+'</div>';
 
   openModal(id?'Modifier INT-'+String(id).padStart(4,'0'):'Nouvelle intervention',body,!!id);
-  makeAC('fart-in','fart-drop',articles,function(a){
+  makeAC('fart-in','fart-drop',function(){return uniq(zMats(gv('fzone')).map(function(m){return m.article;}).filter(Boolean)).sort();},function(a){
     /* Remplir série et client si un seul matériel correspond */
     var matches=D.materiels.filter(function(x){return x.article===a;});
     if(matches.length===1){
@@ -2200,7 +2215,9 @@ function mInter(id){
       var cl=document.getElementById('fcli');if(cl)cl.value=matches[0].client;
     }
   });
-  makeAC('fserie-in','fserie-drop',series,function(s){
+  makeAC('fserie-in','fserie-drop',function(){return zMats(gv('fzone')).map(function(m){return m.serie;}).filter(Boolean);},function(s){
+    var mm=D.materiels.find(function(x){return x.serie===s;});
+    if(mm&&matZone(mm)){var zs=document.getElementById('fzone');if(zs){zs.value=matZone(mm);onZoneChange();}}
     var m=D.materiels.find(function(x){return x.serie===s;});
     if(m){
       var a=document.getElementById('fart-in');if(a)a.value=m.article;
@@ -2285,7 +2302,7 @@ function mCli(id){
     '<div class="fg"><label class="fl">Contact</label><input class="fi" id="fcontact" value="'+escH(d.contact||'')+'"></div>'+
     '<div class="fg2"><div class="fg"><label class="fl">Téléphone</label><input class="fi" id="ftel" value="'+escH(d.tel||'')+'"></div>'+
     '<div class="fg"><label class="fl">Email</label><input class="fi" id="femail" type="email" value="'+escH(d.email||'')+'"></div></div>'+
-    '<div class="fg"><label class="fl">Adresse</label><input class="fi" id="fadr" value="'+escH(d.adresse||'')+'"></div>'+
+    '<div class="fg"><label class="fl">Zone</label><select class="fi" id="fzone"><option value="">—</option>'+opts(ZONES,d.zone)+'</select></div>'+'<div class="fg"><label class="fl">Adresse</label><input class="fi" id="fadr" value="'+escH(d.adresse||'')+'"></div>'+
     '<div class="fg"><label class="fl">Notes</label><textarea class="fi" id="fnotes" rows="2">'+(d.notes||'')+'</textarea></div>',!!id);
 }
 function editCli(id){mCli(id);}
@@ -2393,7 +2410,7 @@ function saveModal(){
       return stk&&stk.qte<p.qte;
     });
     if(manquePieces&&fstat!=='En attente pièces')fstat='En attente pièces';
-    var o={id:EID||(nextId('inter')),article:gv('fart-in'),serie:gv('fserie-in'),client:gv('fcli'),statut:fstat,technicien:gv('ftech'),date_debut:gv('fdeb'),date_fin:gv('dfin'),description:gv('fdesc'),pieces:TMP_PIECES.slice(),devis:collectDevis()};
+    var o={id:EID||(nextId('inter')),zone:gv('fzone'),article:gv('fart-in'),serie:gv('fserie-in'),client:gv('fcli'),statut:fstat,technicien:gv('ftech'),date_debut:gv('fdeb'),date_fin:gv('dfin'),description:gv('fdesc'),pieces:TMP_PIECES.slice(),devis:collectDevis()};
     var ref=escH(o.article)+(o.serie?' ('+o.serie+')':'');
     if(EID){
       var old=D.interventions.find(function(x){return x.id===EID;})||{};
@@ -2418,7 +2435,7 @@ function saveModal(){
     var dmat=EID?D.materiels.find(function(x){return x.id===EID;}):{}; var o={id:EID||(nextId('mat')),article:gv('fart'),serie:gv('fserie'),client:gv('fcli'),marque:gv('fmarq'),technicien:gv('ftech'),statut:(dmat&&dmat.statut)||'',localisation:gv('floc')};
     if(EID){var i=D.materiels.findIndex(function(x){return x.id===EID;});if(i>=0)D.materiels[i]=o;}else D.materiels.push(o);
   }else if(MODE==='cli'){
-    var o={id:EID||(nextId('cli')),nom:gv('fnom'),contact:gv('fcontact'),tel:gv('ftel'),email:gv('femail'),adresse:gv('fadr'),notes:gv('fnotes')};
+    var o={id:EID||(nextId('cli')),nom:gv('fnom'),zone:gv('fzone'),contact:gv('fcontact'),tel:gv('ftel'),email:gv('femail'),adresse:gv('fadr'),notes:gv('fnotes')};
     if(EID){var i=D.clients.findIndex(function(x){return x.id===EID;});if(i>=0)D.clients[i]=o;}else D.clients.push(o);
   }else if(MODE==='tech'){
     var o={id:EID||(nextId('tech')),nom:gv('fnom'),fonction:gv('ffonc'),zone:gv('fzone'),tel:gv('ftel'),email:gv('femail'),statut:gv('fstat')};
