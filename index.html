@@ -424,6 +424,85 @@ var USERS=[];
 /* ================================================================
    STORAGE
 ================================================================ */
+var IMPORT_ROWS_NEUILLY=[
+{date:"2026-03-02",client:"BALAS",article:"MONTEMAT GEDA",serie:"220435",dossier:"33992",montant:552.12,s1:"DEVIS ACCEPTÉ",d1:"2026-04-11",sloc:"EN ATELIER",dloc:"2026-03-02",s2:"DEVIS DONNÉ",d2:"2026-03-10",s3:"",d3:""},
+{date:"2026-04-29",client:"UTB",article:"TR225",serie:"L760038",dossier:"34263",montant:923.91,s1:"DEVIS ACCEPTÉ",d1:"2026-05-20",sloc:"EN ATELIER",dloc:"2026-04-29",s2:"DEVIS ACCEPTÉ",d2:"2026-05-20",s3:"TRAVAUX EN COURS",d3:"2026-06-05"},
+{date:"2026-04-29",client:"UTB",article:"MONTEMAT",serie:"L42004",dossier:"34268",montant:null,s1:"RECEPTIONNÉ",d1:"2026-04-29",sloc:"EN ATELIER",dloc:"2026-04-29",s2:"DEVIS EN COURS",d2:"2026-05-04",s3:"",d3:""},
+{date:"2026-05-04",client:"COUVERTURE POIRIER",article:"PALANBOX160",serie:"161306",dossier:"34277",montant:764.46,s1:"DEVIS ACCEPTÉ",d1:"2026-05-18",sloc:"EN ATELIER",dloc:"2026-05-04",s2:"DEVIS ACCEPTÉ",d2:"2026-05-18",s3:"PIÉCE(S) RECUE(S)",d3:"2026-06-16"},
+{date:"2026-05-04",client:"ANTUNES",article:"ET150",serie:"SANS N° DE SÉRIE",dossier:"34302",montant:313.46,s1:"DEVIS ACCEPTÉ",d1:"1985-07-25",sloc:"EN ATELIER",dloc:"2026-08-14",s2:"DEVIS ACCEPTÉ",d2:"2026-08-14",s3:"TRAVAUX EN COURS",d3:"2026-08-14"},
+{date:"2026-05-27",client:"UTB",article:"DM200/E",serie:"42905",dossier:"34351",montant:250.2,s1:"DEVIS ENVOYÉ",d1:"2026-06-10",sloc:"EN ATELIER",dloc:"2026-05-29",s2:"DEVIS ACCEPTÉ",d2:"2026-06-09",s3:"PIÉCE(S) EN COMMANDE",d3:"2026-06-22"},
+{date:"2026-05-27",client:"UTB",article:"DM500/E",serie:"14941",dossier:"34354",montant:613.47,s1:"DEVIS ENVOYÉ",d1:"2026-06-10",sloc:"EN ATELIER",dloc:"2026-05-29",s2:"DEVIS ACCEPTÉ",d2:"2026-06-08",s3:"PIÉCE(S) EN COMMANDE",d3:"2026-06-22"},
+{date:"2026-05-27",client:"UTB",article:"DM500/E",serie:"14911",dossier:"34355",montant:1074.43,s1:"DEVIS ENVOYÉ",d1:"2026-06-10",sloc:"EN ATELIER",dloc:"2026-05-29",s2:"DEVIS ACCEPTÉ",d2:"2026-06-08",s3:"PIÉCE(S) EN COMMANDE",d3:"2026-06-22"},
+{date:"2026-05-27",client:"UTB",article:"DM500/E",serie:"13720",dossier:"34356",montant:526.28,s1:"DEVIS ENVOYÉ",d1:"2026-06-10",sloc:"EN ATELIER",dloc:"2026-05-29",s2:"DEVIS ACCEPTÉ",d2:"2026-06-08",s3:"PIÉCE(S) EN COMMANDE",d3:"2026-06-22"},
+{date:"2026-05-27",client:"UTB",article:"TR225",serie:"L760059",dossier:"34358",montant:1582.4,s1:"DEVIS ENVOYÉ",d1:"2026-05-27",sloc:"EN ATELIER",dloc:"2026-05-29",s2:"DEVIS ACCEPTÉ",d2:"2026-06-10",s3:"PIÉCE(S) EN COMMANDE",d3:"2026-06-22"},
+{date:"2026-05-27",client:"UTB",article:"TR225",serie:"L760098",dossier:"34362",montant:550.28,s1:"DEVIS ENVOYÉ",d1:"2026-06-12",sloc:"EN ATELIER",dloc:"2026-05-29",s2:"DEVIS ACCEPTÉ",d2:"2026-06-11",s3:"PIÉCE(S) EN COMMANDE",d3:"2026-06-22"},
+{date:"2026-06-02",client:"COBA France",article:"TR225/1,50",serie:"K009668873",dossier:"34366",montant:551.71,s1:"DEVIS ACCEPTÉ",d1:"2026-06-22",sloc:"EN ATELIER",dloc:"2026-06-03",s2:"DEVIS ACCEPTÉ",d2:"2206/2026",s3:"",d3:""},
+{date:"2026-06-02",client:"ETS LAYHER",article:"PE1000 + CHV1000",serie:"1642402632",dossier:"34373",montant:null,s1:"RECEPTIONNÉ",d1:"2026-06-02",sloc:"EN ATELIER",dloc:"2026-06-02",s2:"DEVIS ACCEPTÉ",d2:"2026-06-03",s3:"TRAVAUX EN COURS",d3:"2026-08-06"},
+{date:"2026-06-16",client:"ASCENSEURS LUSITANOS",article:"TIRAK 1000",serie:"4014",dossier:"34414",montant:null,s1:"RECEPTIONNÉ",d1:"2026-06-16",sloc:"EN ATELIER",dloc:"2026-06-16",s2:"DEVIS EN COURS",d2:"2026-06-16",s3:"",d3:""},
+{date:"2026-06-19",client:"MB MONTAGE",article:"PE500/MONO",serie:"90118117",dossier:"34440",montant:null,s1:"RECEPTIONNÉ",d1:"2026-09-19",sloc:"EN ATELIER",dloc:"2026-06-22",s2:"DEVIS EN COURS",d2:"2026-06-22",s3:"",d3:""},
+{date:"2026-06-19",client:"MB MONTAGE",article:"PE500/MONO",serie:"90118124",dossier:"34441",montant:null,s1:"RECEPTIONNÉ",d1:"2026-06-19",sloc:"EN ATELIER",dloc:"2026-06-22",s2:"DEVIS EN COURS",d2:"2026-06-22",s3:"",d3:""},
+{date:"2026-06-25",client:"RATP",article:"PE2500 V",serie:"100484918",dossier:"34465",montant:9835.25,s1:"DEVIS FAIT",d1:"2026-06-30",sloc:"EN ATELIER",dloc:"2026-06-29",s2:"DEVIS DONNÉ",d2:"2026-06-30",s3:"",d3:""},
+{date:"2026-06-26",client:"UTB",article:"TR225",serie:"L760054",dossier:"34668",montant:null,s1:"RECEPTIONNÉ",d1:"2026-06-26",sloc:"EN ATELIER",dloc:"",s2:"",d2:"",s3:"",d3:""},
+{date:"2026-06-26",client:"UTB",article:"TR225",serie:"L760064",dossier:"34669",montant:784.5,s1:"RECEPTIONNÉ",d1:"2026-06-26",sloc:"EN ATELIER",dloc:"",s2:"",d2:"",s3:"",d3:""},
+{date:"2026-07-03",client:"SOARES",article:"MONTE MAT",serie:"11212",dossier:"24472",montant:null,s1:"",d1:"",sloc:"",dloc:"",s2:"",d2:"",s3:"",d3:""},
+{date:"2026-07-16",client:"DOMINGUES",article:"TREUIL ROUGE",serie:"SANS N° SERIE",dossier:"34549",montant:null,s1:"",d1:"",sloc:"",dloc:"",s2:"",d2:"",s3:"",d3:""},
+{date:"2026-07-16",client:"DOMINGUES",article:"TREUIL BETA",serie:"663649",dossier:"34548",montant:null,s1:"",d1:"",sloc:"",dloc:"",s2:"",d2:"",s3:"",d3:""},
+{date:"2026-07-16",client:"DOMINGUES",article:"TREUIL IMER",serie:"M0097293",dossier:"34547",montant:null,s1:"",d1:"",sloc:"",dloc:"",s2:"",d2:"",s3:"",d3:""},
+{date:"2026-07-28",client:"BONNET OLIVIER",article:"TOUTLEV",serie:"147442",dossier:"34605",montant:null,s1:"RECEPTIONNÉ",d1:"",sloc:"",dloc:"",s2:"",d2:"",s3:"",d3:""},
+{date:"2026-08-20",client:"CEGELEC",article:"ELEVATEUR LGM20",serie:"23-71825",dossier:"34655",montant:null,s1:"",d1:"",sloc:"",dloc:"",s2:"",d2:"",s3:"",d3:""},
+{date:"2026-09-01",client:"MONASCENSEUR",article:"LIFTHO 1000",serie:"702 // 542100",dossier:"34685",montant:null,s1:"",d1:"",sloc:"",dloc:"",s2:"",d2:"",s3:"",d3:""},
+{date:"2026-09-08",client:"UTB",article:"TR225",serie:"L760029",dossier:"",montant:null,s1:"RECEPTIONNÉ",d1:"2026-09-08",sloc:"EN ATELIER",dloc:"",s2:"",d2:"",s3:"",d3:""},
+{date:"2026-09-08",client:"UTB",article:"TR225",serie:"L760078",dossier:"",montant:null,s1:"RECEPTIONNÉ",d1:"2026-09-08",sloc:"EN ATELIER",dloc:"",s2:"",d2:"",s3:"",d3:""},
+{date:"2026-09-08",client:"UTB",article:"TR225",serie:"L760085",dossier:"",montant:null,s1:"RECEPTIONNÉ",d1:"2026-09-08",sloc:"EN ATELIER",dloc:"",s2:"",d2:"",s3:"",d3:""},
+{date:"2026-09-17",client:"CMP",article:"ELEVATEUR",serie:"9500-12836",dossier:"34760",montant:null,s1:"RECEPTIONNÉ",d1:"2026-09-17",sloc:"",dloc:"",s2:"",d2:"",s3:"",d3:""},
+{date:"2026-09-17",client:"CMP",article:"ELEVATEUR",serie:"9598-6484",dossier:"34761",montant:null,s1:"RECEPTIONNÉ",d1:"2026-09-17",sloc:"",dloc:"",s2:"",d2:"",s3:"",d3:""},
+{date:"2026-09-17",client:"CMP",article:"ELEVATEUR",serie:"9599-7986",dossier:"34762",montant:null,s1:"RECEPTIONNÉ",d1:"2026-09-17",sloc:"",dloc:"",s2:"",d2:"",s3:"",d3:""},
+{date:"2026-09-18",client:"ATZ",article:"TR225",serie:"9928035",dossier:"34764",montant:null,s1:"RECEPTIONNÉ",d1:"2026-09-18",sloc:"",dloc:"",s2:"",d2:"",s3:"",d3:""},
+{date:"2026-09-18",client:"LAYHER",article:"PE1000",serie:"1112303990",dossier:"34765",montant:null,s1:"RECEPTIONNÉ",d1:"2026-09-18",sloc:"",dloc:"",s2:"",d2:"",s3:"",d3:""}
+];
+
+function runExcelImportNeuilly(){
+  var FLAG=SK+'_imp_neuilly_2026_09';
+  if(localStorage.getItem(FLAG))return Promise.resolve();
+  var zone='Neuilly-sur-Seine (01)';
+  var newClients=[],newInter=[];
+  var DVMAP={'DEVIS ENVOYÉ':'Envoyé','DEVIS DONNÉ':'Envoyé','DEVIS ACCEPTÉ':'Accepté','DEVIS REFUSÉ':'Refusé'};
+  IMPORT_ROWS_NEUILLY.forEach(function(r){
+    if(!D.clients.find(function(c){return c.nom===r.client;})){
+      var c={id:nextId('cli'),nom:r.client,zone:zone,contact:'',tel:'',email:'',adresse:'',notes:'Import Excel Classeur1.xlsx'};
+      D.clients.push(c);newClients.push(c);
+    }
+    if(!D.materiels.find(function(m){return m.article===r.article&&m.serie===r.serie&&m.client===r.client;})){
+      D.materiels.push({id:nextId('mat'),article:r.article,serie:r.serie,client:r.client,marque:'AUTRES',statut:'',localisation:zone,technicien:'',date_livraison:''});
+    }
+    var cur=r.s3||r.s2||r.s1||'RECEPTIONNÉ';
+    var dvSrc=r.s2||r.s1||'';
+    var dvStat=DVMAP[dvSrc]||'En attente';
+    var stat;
+    if(cur==='TRAVAUX EN COURS'||cur==="PIÉCE(S) RECUE(S)")stat='En cours';
+    else if(cur==='PIÉCE(S) EN COMMANDE')stat='En attente pièces';
+    else if(cur==='DEVIS ACCEPTÉ')stat='En cours';
+    else if(cur==='DEVIS EN COURS'||cur==='DEVIS FAIT'||cur==='DEVIS DONNÉ'||cur==='DEVIS ENVOYÉ')stat='Devis fait';
+    else stat='En attente';
+    var hist=[];
+    if(r.s1)hist.push(r.s1+(r.d1?' ('+fmtDate(r.d1)+')':''));
+    if(r.sloc)hist.push(r.sloc+(r.dloc?' ('+fmtDate(r.dloc)+')':''));
+    if(r.s2)hist.push(r.s2+(r.d2?' ('+r.d2.match(/^\d{4}-\d{2}-\d{2}$/)?fmtDate(r.d2):r.d2+')':')'));
+    if(r.s3)hist.push(r.s3+(r.d3?' ('+fmtDate(r.d3)+')':''));
+    var desc='Import Excel — dossier n°'+r.dossier+(hist.length?' — '+hist.join(' → '):'');
+    var o={id:nextId('inter'),zone:zone,article:r.article,serie:r.serie,client:r.client,statut:stat,technicien:'',
+      date_debut:r.date,date_fin:addWorkdays(r.date,10),description:desc,pieces:[],
+      devis:{statut:dvStat,date_devis:(r.d2&&/^\d{4}-\d{2}-\d{2}$/.test(r.d2))?r.d2:(r.d1||''),vgp:false,tva:20,
+        lignes_pieces:r.montant?[{desc:'Montant devis (import Excel, dossier n°'+r.dossier+')',qte:1,pu:r.montant}]:[],
+        mo:[],notes:''}};
+    D.interventions.unshift(o);newInter.push(o);
+  });
+  syncMatStatut();
+  localStorage.setItem(FLAG,'1');
+  if(!SUPA_OK)return Promise.resolve();
+  return Promise.all([supaUpsert('clients',newClients),supaUpsert('interventions',newInter)]).catch(function(){});
+}
+
 function load(){
   initSupa();
   loadCounters();
@@ -449,6 +528,7 @@ function load(){
     if(mv.length){mv.forEach(function(i){if(!D.historique.find(function(h){return h.id===i.id;}))D.historique.push(i);});D.interventions=D.interventions.filter(function(i){return i.statut!=='Terminé'&&i.statut!=='Annulé';});}
   }
   /* Sauvegarder localement d'abord puis charger depuis Supabase */
+  runExcelImportNeuilly().then(function(){
   saveLocal();
   draw(PAGE,'');
   applySidebarPerms();
@@ -485,6 +565,7 @@ function load(){
       }
     }).catch(function(){showSupaStatus(false);});
   }
+  });
 }
 function saveLocal(){D.users=USERS;D.journal=JOURNAL;try{localStorage.setItem(SK,JSON.stringify(D));}catch(e){}}
 function save(){
