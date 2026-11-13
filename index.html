@@ -503,6 +503,49 @@ function runExcelImportNeuilly(){
   return Promise.all([supaUpsert('clients',newClients),supaUpsert('interventions',newInter)]).catch(function(){});
 }
 
+var IMPORT_ROWS_NEUILLY_2=[
+{date:"2026-09-29",client:"BOUYGUES",ref:"6589",article:"TELECOMMANDE DE TR225",serie:"972711",code2:"",dossier:"34784",statut:"RECEPTIONNÉ"},
+{date:"2026-10-02",client:"ASCENSEURS ET TELESURVEILLAN[?]",ref:"20039",article:"TR50 AVEC RADIOCOMMANDE",serie:"1523010",code2:"",dossier:"34809",statut:"RECEPTIONNÉ"},
+{date:"2026-10-02",client:"RABONI",ref:"10322",article:"TR225",serie:"9933666",code2:"106711",dossier:"34902",statut:"RECEPTIONNÉ"},
+{date:"2026-10-28",client:"EUROPE ECHAFAUDAGE",ref:"5808",article:"PE1000",serie:"1626106923",code2:"10439",dossier:"34927",statut:"RECEPTIONNÉ"},
+{date:"2026-10-29",client:"ASCENSEURS LUSITANOS",ref:"18621",article:"LIFTHO 1000",serie:"124",code2:"106408",dossier:"34935",statut:"RECEPTIONNÉ"},
+{date:"2026-10-29",client:"ILE DE FRANCE REFRACTAIRE",ref:"10961",article:"HE200",serie:"15599/1670162",code2:"11329",dossier:"34929",statut:"RECEPTIONNÉ"},
+{date:"2026-10-29",client:"ILE DE FRANCE REFRACTAIRE",ref:"10961",article:"HE200",serie:"14634/1670158",code2:"8341",dossier:"34928",statut:"RECEPTIONNÉ"},
+{date:"2026-10-23",client:"GTM BATIMENT",ref:"5415",article:"HE200",serie:"9726712",code2:"106725",dossier:"34911",statut:"RECEPTIONNÉ"},
+{date:"2026-10-23",client:"GTM BATIMENT",ref:"5415",article:"HE200",serie:"1570817",code2:"106724",dossier:"34910",statut:"RECEPTIONNÉ"},
+{date:"2026-10-23",client:"GTM BATIMENT",ref:"5415",article:"HE200",serie:"967669",code2:"106726",dossier:"34912",statut:"RECEPTIONNÉ"},
+{date:"2026-10-23",client:"GTM BATIMENT",ref:"5415",article:"HE200",serie:"978447",code2:"106727",dossier:"34913",statut:"RECEPTIONNÉ"},
+{date:"2026-10-23",client:"GTM BATIMENT",ref:"5415",article:"TR225",serie:"160816/2",code2:"106723",dossier:"34909",statut:"RECEPTIONNÉ"},
+{date:"2026-11-02",client:"SAT",ref:"5824",article:"CRIC ST",serie:"TD211151",code2:"106737",dossier:"34942",statut:"RECEPTIONNÉ"},
+{date:"2026-11-10",client:"DANIEL BAIN",ref:"4951",article:"DM500/E",serie:"35776",code2:"",dossier:"34971",statut:"RECEPTIONNÉ"},
+{date:"2026-11-12",client:"ASCENSEURS LUSITANOS",ref:"18621",article:"LP120",serie:"533",code2:"106710",dossier:"34974",statut:"RECEPTIONNÉ"}
+];
+
+function runExcelImportNeuilly2(){
+  var FLAG=SK+'_imp_neuilly_2026_11';
+  if(localStorage.getItem(FLAG))return Promise.resolve();
+  var zone='Neuilly-sur-Seine (01)';
+  var newClients=[],newInter=[];
+  IMPORT_ROWS_NEUILLY_2.forEach(function(r){
+    if(!D.clients.find(function(c){return c.nom===r.client;})){
+      var c={id:nextId('cli'),nom:r.client,zone:zone,contact:'',tel:'',email:'',adresse:'',notes:'Import Excel tableau_receptions.xlsx'};
+      D.clients.push(c);newClients.push(c);
+    }
+    if(!D.materiels.find(function(m){return m.article===r.article&&m.serie===r.serie&&m.client===r.client;})){
+      D.materiels.push({id:nextId('mat'),article:r.article,serie:r.serie,client:r.client,marque:'AUTRES',statut:'',localisation:zone,technicien:'',date_livraison:''});
+    }
+    var desc='Import Excel — dossier n°'+r.dossier+' — réf. client '+r.ref+(r.code2?' — code '+r.code2:'')+' — '+r.statut+' ('+fmtDate(r.date)+')';
+    var o={id:nextId('inter'),zone:zone,article:r.article,serie:r.serie,client:r.client,statut:'En attente',technicien:'',
+      date_debut:r.date,date_fin:addWorkdays(r.date,10),description:desc,pieces:[],
+      devis:{statut:'En attente',date_devis:'',vgp:false,tva:20,lignes_pieces:[],mo:[],notes:''}};
+    D.interventions.unshift(o);newInter.push(o);
+  });
+  syncMatStatut();
+  localStorage.setItem(FLAG,'1');
+  if(!SUPA_OK)return Promise.resolve();
+  return Promise.all([supaUpsert('clients',newClients),supaUpsert('interventions',newInter)]).catch(function(){});
+}
+
 function load(){
   initSupa();
   loadCounters();
@@ -529,6 +572,8 @@ function load(){
   }
   /* Sauvegarder localement d'abord puis charger depuis Supabase */
   runExcelImportNeuilly().then(function(){
+  return runExcelImportNeuilly2();
+  }).then(function(){
   saveLocal();
   draw(PAGE,'');
   applySidebarPerms();
