@@ -2,7 +2,11 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1e40af">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SAV">
 <title>Chastagner Location SAV — GMAO</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -237,6 +241,101 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tl-action{font-size:11px;font-weight:700;color:var(--txt);}
 .tl-detail{font-size:10px;color:var(--txt2);margin-top:2px;}
 .tl-meta{font-size:9px;color:var(--txt3);margin-top:3px;}
+
+/* Planning : classes utilisées par le HTML mais absentes de la feuille de style */
+.plan-header,.plan-row{display:contents;}
+.plan-tech-col{background:var(--bg2);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--txt2);padding:10px 12px;display:flex;align-items:center;}
+.plan-day{background:var(--bg2);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--txt2);text-align:center;padding:10px 6px;line-height:1.6;}
+.plan-day.today{background:var(--bluebg);color:var(--blue);}
+.plan-event{border-radius:5px;padding:4px 8px;font-size:9px;font-weight:700;margin-bottom:4px;cursor:pointer;line-height:1.4;}
+.plan-week-nav{display:flex;gap:6px;flex-wrap:wrap;}
+
+/* ================================================================
+   MOBILE
+================================================================ */
+.hamb{display:none;background:var(--bg2);border:1px solid var(--bdr2);border-radius:var(--r);width:40px;height:40px;align-items:center;justify-content:center;cursor:pointer;color:var(--txt);flex-shrink:0;padding:0;}
+.hamb svg{width:20px;height:20px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;}
+.sb-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1050;}
+.sb-backdrop.show{display:block;}
+
+@media (max-width:820px){
+  body,.app{height:100vh;height:100dvh;}
+  .app{position:relative;}
+
+  /* Menu latéral -> tiroir */
+  .sb{position:fixed;left:0;top:0;bottom:0;height:100vh;height:100dvh;width:276px;min-width:276px;max-width:82vw;z-index:1100;transform:translateX(-102%);transition:transform .22s ease;box-shadow:none;padding-top:env(safe-area-inset-top);}
+  .sb.open{transform:none;box-shadow:0 0 40px rgba(0,0,0,.25);}
+  .ni{padding:13px 12px;font-size:13px;}
+
+  /* Barre du haut */
+  .hamb{display:flex;order:0;}
+  .topbar{flex-wrap:wrap;gap:8px;padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top));}
+  .topbar-title{order:1;flex:1;min-width:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .topbar-right{display:contents;}
+  #btn-add{order:2;padding:10px 14px;}
+  .src{order:3;flex:1 1 100%;width:100%;}
+
+  /* Contenu */
+  .ct{padding:10px;padding-bottom:calc(16px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch;}
+  .card:hover,.kp:hover{box-shadow:var(--shadow-s);}
+  .kp-v{font-size:20px;}
+
+  /* Grilles */
+  .kg{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px;}
+  .chart-grid-2,.chart-grid-3{grid-template-columns:1fr;}
+  .perm-grid{grid-template-columns:repeat(2,1fr);}
+  .ct [style*="grid-template-columns"]:not(.kg):not(.plan-grid){grid-template-columns:1fr!important;}
+  .donut-wrap{flex-wrap:wrap;}
+  .plan-grid{grid-template-columns:84px repeat(7,minmax(88px,1fr));}
+  .plan-tech-col,.plan-tech{position:sticky;left:0;z-index:1;}
+  .plan-week-nav{width:100%;}
+  .plan-week-nav .bs{flex:1;}
+
+  /* Tableaux -> cartes empilées */
+  .tw{overflow-x:visible;}
+  .tbl{min-width:0!important;}
+  .tbl thead{display:none;}
+  .tbl,.tbl tbody,.tbl tr,.tbl td{display:block;width:100%;}
+  .tbl tr{padding:6px 0;border-bottom:8px solid var(--bg);}
+  .tbl tr:last-child{border-bottom:none;}
+  .tbl td{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:6px 14px;border-bottom:none;text-align:right!important;word-break:break-word;}
+  .tbl td::before{content:attr(data-label);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--txt2);text-align:left;flex-shrink:0;max-width:42%;}
+  .tbl td[data-label=""]::before{display:none;}
+  .tbl td:empty{display:none;}
+  .tbl td[data-label=""]{justify-content:flex-end;}
+  .tbl tr:hover td{background:none;}
+  .tbl td .bs,.tbl td .bp,.tbl td .bd,.tbl td .bg-btn{padding:9px 14px!important;font-size:12px!important;}
+
+  /* Filtres */
+  .filter-bar{gap:6px;padding:8px 10px;}
+  .filter-label{display:none;}
+  .filter-bar select,.filter-bar input{flex:1 1 calc(50% - 6px);min-width:0;padding:9px 10px;}
+  .filter-bar .bs{flex:1 1 100%;padding:9px;}
+
+  /* Onglets & pagination */
+  .mtabs,.period-tabs{overflow-x:auto;max-width:100%;width:100%;-webkit-overflow-scrolling:touch;}
+  .mtab,.ptab{white-space:nowrap;flex-shrink:0;}
+  .pager{flex-wrap:wrap;}
+
+  /* Formulaires : 16px évite le zoom automatique sur iPhone */
+  .fi,.src,.filter-bar select,.filter-bar input,.modal select,.modal input,.modal textarea{font-size:16px!important;}
+  .fg2{grid-template-columns:1fr;gap:0;}
+  .bp,.bs,.bd,.bg-btn{min-height:38px;}
+
+  /* Fenêtres modales -> feuille plein bas */
+  .ov{align-items:flex-end;}
+  .modal{margin:0;max-width:none;width:100%;max-height:94vh;max-height:94dvh;border-radius:16px 16px 0 0;animation:sheet-in .22s ease;padding-bottom:env(safe-area-inset-bottom);}
+  @keyframes sheet-in{from{transform:translateY(40px);opacity:.6;}to{transform:none;opacity:1;}}
+  .mx{width:40px;height:40px;font-size:24px;}
+
+  /* Notifications */
+  #toast-container{left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));}
+  .toast{max-width:none;}
+
+  /* Connexion */
+  #login-overlay>div{padding:28px 20px!important;max-width:none!important;margin:0 14px;}
+  #login-overlay input{font-size:16px!important;}
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -274,6 +373,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
+<div class="sb-backdrop" id="sb-backdrop" onclick="closeNav()"></div>
 <div class="app" style="display:flex">
   <div class="sb">
     <div class="sb-brand">
@@ -319,6 +419,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
   <div class="main">
     <div class="topbar">
+      <button class="hamb" id="hamb" onclick="toggleNav()" aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
       <div class="topbar-title" id="ptitle">Tableau de bord</div>
       <div class="topbar-right">
         <input class="src" type="text" placeholder="Rechercher..." id="gsrc" oninput="doSearch(this.value)">
@@ -960,7 +1061,39 @@ function sparkBars(vals){
 /* ================================================================
    NAV & DRAW
 ================================================================ */
+/* ================================================================
+   MOBILE : tiroir de navigation + tableaux en cartes
+================================================================ */
+function toggleNav(force){
+  var sb=document.querySelector('.sb'),bd=document.getElementById('sb-backdrop');if(!sb||!bd)return;
+  var open=(typeof force==='boolean')?force:!sb.classList.contains('open');
+  sb.classList.toggle('open',open);bd.classList.toggle('show',open);
+}
+function closeNav(){toggleNav(false);}
+window.addEventListener('resize',function(){if(window.innerWidth>820)closeNav();});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeNav();});
+function stackTables(root){
+  (root||document).querySelectorAll('.tbl').forEach(function(t){
+    var hs=[].map.call(t.querySelectorAll('thead th'),function(th){return th.textContent.trim();});
+    t.querySelectorAll('tbody tr').forEach(function(tr){
+      var vis=[].filter.call(tr.children,function(td){return td.tagName==='TD'&&td.style.display!=='none';});
+      vis.forEach(function(td,i){
+        if(td.getAttribute('data-label')===null)td.setAttribute('data-label',td.colSpan>1?'':(hs[i]||''));
+      });
+    });
+  });
+}
+(function(){
+  var ct=document.getElementById('ct');if(!ct||!window.MutationObserver)return;
+  var pend=false;
+  new MutationObserver(function(){
+    if(pend)return;pend=true;
+    requestAnimationFrame(function(){pend=false;stackTables(ct);});
+  }).observe(ct,{childList:true,subtree:true});
+})();
+
 function goPage(p,el){
+  closeNav();
   PAGE=p;CP=1;LS='';
   document.querySelectorAll('.ni').forEach(function(i){i.classList.remove('on');});
   var ni=document.getElementById('ni-'+p);if(ni)ni.classList.add('on');
