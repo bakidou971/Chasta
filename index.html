@@ -643,10 +643,12 @@ function runExcelImportNeuilly2(){
   return Promise.all([supaUpsert('clients',newClients),supaUpsert('interventions',newInter)]).catch(function(){});
 }
 
-function runDeleteInt2908(){
-  var FLAG=SK+'_del_int_2908';
+function runDeleteInts(){
+  return delIntOnce(2908).then(function(){return delIntOnce(2919);});
+}
+function delIntOnce(id){
+  var FLAG=SK+'_del_int_'+id;
   if(localStorage.getItem(FLAG))return Promise.resolve();
-  var id=2908;
   D.interventions=(D.interventions||[]).filter(function(x){return x.id!==id;});
   D.historique=(D.historique||[]).filter(function(x){return x.id!==id;});
   if(!SUPA_OK)return Promise.resolve();
@@ -654,7 +656,7 @@ function runDeleteInt2908(){
     Promise.resolve(supa.from('interventions').delete().eq('id',id)),
     Promise.resolve(supa.from('historique').delete().eq('id',id))
   ]).then(function(rs){
-    if(rs.some(function(r){return r&&r.error;})){console.warn('suppression INT-2908',rs);return;}
+    if(rs.some(function(r){return r&&r.error;})){console.warn('suppression INT-'+id,rs);return;}
     localStorage.setItem(FLAG,'1');
   }).catch(function(){});
 }
@@ -694,7 +696,7 @@ function load(){
     if(mv.length){mv.forEach(function(i){if(!D.historique.find(function(h){return h.id===i.id;}))D.historique.push(i);});D.interventions=D.interventions.filter(function(i){return i.statut!=='Terminé'&&i.statut!=='Annulé';});}
   }
   /* Sauvegarder localement d'abord puis charger depuis Supabase */
-  runCleanupTechs().then(function(){return runDeleteInt2908();}).then(function(){return runExcelImportNeuilly();}).then(function(){
+  runCleanupTechs().then(function(){return runDeleteInts();}).then(function(){return runExcelImportNeuilly();}).then(function(){
   return runExcelImportNeuilly2();
   }).then(function(){
   saveLocal();
