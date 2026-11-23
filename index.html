@@ -506,11 +506,7 @@ function buildDefaults(){
     users:[],
     clients:[{id:1,nom:'H. CHEVALIER',contact:'Direction',tel:'',email:'',adresse:'France',notes:''}],
     techniciens:[
-      {id:1,nom:'Sael BALERZY',fonction:'Semi-itinérant',tel:'',email:'',zone:'Herbay-sur-Seine (02)',statut:'Actif'},
-      {id:2,nom:'Juma',fonction:'Électro-technicien',tel:'',email:'',zone:'Neuilly-sur-Seine (01)',statut:'Actif'},
-      {id:3,nom:'Imerane',fonction:'Électro-technicien',tel:'',email:'',zone:'Orlean (05)',statut:'Actif'},
-      {id:4,nom:'Danael BOSMON',fonction:'Responsable',tel:'',email:'',zone:'Rouen (06)',statut:'Actif'},
-      {id:5,nom:'Gaillor DIAKOTA',fonction:'Semi-itinérant',tel:'',email:'',zone:'Lille (08)',statut:'Actif'}
+      {id:4,nom:'Danael BOSMON',fonction:'Responsable',tel:'',email:'',zone:'',statut:'Actif'}
     ],
     materiels:JSON.parse(JSON.stringify(MAT_DATA)),
     interventions:[],
@@ -647,6 +643,32 @@ function runExcelImportNeuilly2(){
   return Promise.all([supaUpsert('clients',newClients),supaUpsert('interventions',newInter)]).catch(function(){});
 }
 
+function runDeleteInt2908(){
+  var FLAG=SK+'_del_int_2908';
+  if(localStorage.getItem(FLAG))return Promise.resolve();
+  var id=2908;
+  D.interventions=(D.interventions||[]).filter(function(x){return x.id!==id;});
+  D.historique=(D.historique||[]).filter(function(x){return x.id!==id;});
+  if(!SUPA_OK)return Promise.resolve();
+  return Promise.all([
+    Promise.resolve(supa.from('interventions').delete().eq('id',id)),
+    Promise.resolve(supa.from('historique').delete().eq('id',id))
+  ]).then(function(rs){
+    if(rs.some(function(r){return r&&r.error;})){console.warn('suppression INT-2908',rs);return;}
+    localStorage.setItem(FLAG,'1');
+  }).catch(function(){});
+}
+function runCleanupTechs(){
+  var FLAG=SK+'_clean_techs_2026_11';
+  if(localStorage.getItem(FLAG))return Promise.resolve();
+  D.techniciens=(D.techniciens||[]).filter(function(t){return /^danael/i.test(t.nom||'');});
+  D.techniciens.forEach(function(t){t.zone='';});
+  if(!SUPA_OK)return Promise.resolve();
+  return Promise.resolve(supa.from('techniciens').delete().not('nom','ilike','Danael%')).then(function(res){
+    if(res&&res.error){console.warn('cleanup techniciens',res.error);return;}
+    return supaUpsert('techniciens',D.techniciens).then(function(){localStorage.setItem(FLAG,'1');});
+  }).catch(function(){});
+}
 function load(){
   initSupa();
   loadCounters();
@@ -672,7 +694,7 @@ function load(){
     if(mv.length){mv.forEach(function(i){if(!D.historique.find(function(h){return h.id===i.id;}))D.historique.push(i);});D.interventions=D.interventions.filter(function(i){return i.statut!=='Terminé'&&i.statut!=='Annulé';});}
   }
   /* Sauvegarder localement d'abord puis charger depuis Supabase */
-  runExcelImportNeuilly().then(function(){
+  runCleanupTechs().then(function(){return runDeleteInt2908();}).then(function(){return runExcelImportNeuilly();}).then(function(){
   return runExcelImportNeuilly2();
   }).then(function(){
   saveLocal();
@@ -824,8 +846,8 @@ function gn(id){var e=document.getElementById(id);return e?parseFloat(e.value)||
 function gb(id){var e=document.getElementById(id);return e?e.checked:false;}
 function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function opts(arr,cur){return arr.map(function(x){return'<option'+(x===cur?' selected':'')+' value="'+escH(x)+'">'+escH(x)+'</option>';}).join('');}
-function fmtDate(ds){return ds?new Date(ds).toLocaleDateString('fr-FR'):'—';}
-function fmtDateShort(ds){if(!ds)return'—';var d=new Date(ds);return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');}
+function fmtDate(ds){if(!ds)return'—';if(/^\d{4}-\d{2}-\d{2}$/.test(ds)){var p=ds.split('-');return p[2]+'/'+p[1]+'/'+p[0];}return new Date(ds).toLocaleDateString('fr-FR');}
+function fmtDateShort(ds){if(!ds)return'—';if(/^\d{4}-\d{2}-\d{2}$/.test(ds)){var q=ds.split('-');return q[2]+'/'+q[1];}var d=new Date(ds);return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');}
 function addWorkdays(ds,days){var d=new Date(ds),a=0;while(a<days){d.setDate(d.getDate()+1);var w=d.getDay();if(w!==0&&w!==6)a++;}return d.toISOString().split('T')[0];}
 function wdBetween(d1,d2){if(!d1||!d2)return 0;var a=new Date(d1),b=new Date(d2);if(b<=a)return 0;var c=0,cur=new Date(a);while(cur<b){cur.setDate(cur.getDate()+1);var w=cur.getDay();if(w!==0&&w!==6)c++;}return c;}
 function wdUntil(ds){if(!ds)return null;var now=new Date();now.setHours(0,0,0,0);var end=new Date(ds);end.setHours(0,0,0,0);if(end<=now)return 0;return wdBetween(now.toISOString().split('T')[0],ds);}
@@ -833,7 +855,7 @@ function uniq(arr){var seen={},out=[];arr.forEach(function(x){if(x!=null&&!seen[
 function cliZone(n){var c=D.clients.find(function(x){return x.nom===n;});return c&&c.zone||'';}
 function matZone(m){return m.localisation||cliZone(m.client);}
 function zClients(z,keep){return D.clients.filter(function(c){return !z||c.zone===z||c.nom===keep;});}
-function zTechs(z,keep){return D.techniciens.filter(function(t){return (t.statut==='Actif'&&(!z||t.zone===z))||t.nom===keep;});}
+function zTechs(z,keep){return D.techniciens.filter(function(t){return (t.statut==='Actif'&&(!z||t.zone===z||!t.zone))||t.nom===keep;});}
 function zMats(z){return D.materiels.filter(function(m){return !z||matZone(m)===z;});}
 function onZoneChange(){
   var z=gv('fzone'),cl=document.getElementById('fcli'),te=document.getElementById('ftech');
@@ -854,7 +876,8 @@ function calBetween(d1,d2){if(!d1||!d2)return 0;return Math.round((new Date(d2)-
 function durText(i){if(!i.date_debut)return '—';var d2s=i.date_cloture||i.date_fin;if(!d2s)return '—';var t1=i.heure_debut||'08:00',t2=i.date_cloture?(i.heure_cloture||'17:00'):(i.heure_fin||'17:00');var d1dt=new Date(i.date_debut+'T'+t1),d2dt=new Date(d2s+'T'+t2);var diff=d2dt-d1dt;if(diff<=0)return '0h';var totalH=Math.floor(diff/(1000*60*60)),j=Math.floor(totalH/24),h=totalH%24;if(j===0)return h+'h';if(h===0)return j+' j.';return j+' j. '+h+'h';}
 function durMinutes(i){if(!i.date_debut)return 0;var d2s=i.date_cloture||i.date_fin;if(!d2s)return 0;var t1=i.heure_debut||'08:00',t2=i.date_cloture?(i.heure_cloture||'17:00'):(i.heure_fin||'17:00');return Math.max(0,Math.round((new Date(d2s+'T'+t2)-new Date(i.date_debut+'T'+t1))/(1000*60)));}
 function avgDurText(m){if(!m)return '—';var d=Math.floor(m/1440),h=Math.floor((m%1440)/60),mn=Math.round(m%60);if(d>0&&h>0)return d+' j. '+h+'h';if(d>0)return d+' j.';if(h>0)return h+'h';return mn+'min';}
-function todayStr(){return new Date().toISOString().split('T')[0];}
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function todayStr(){return ymd(new Date());}
 var ROLES={
   createur:    {label:'Créateur',    color:'#7c3aed'},
   responsable: {label:'Responsable', color:'#2563eb'},
@@ -1470,13 +1493,13 @@ function rPlanning(){
   /* Build header */
   var headerCells=days.map(function(d,i){
     var isToday=d.getTime()===today.getTime();
-    var lbl=dayNames[i]+' '+fmtDateShort(d.toISOString().split('T')[0]);
+    var lbl=dayNames[i]+' '+fmtDateShort(ymd(d));
     return'<div class="plan-day'+(isToday?' today':'')+'">'+lbl+'</div>';
   }).join('');
   /* Build rows per technicien */
   var rows=D.techniciens.filter(function(t){return t.statut==='Actif';}).map(function(tech){
     var cells=days.map(function(d){
-      var ds=d.toISOString().split('T')[0];
+      var ds=ymd(d);
       /* Find interventions for this tech on this day */
       var interv=D.interventions.filter(function(i){
         return i.technicien===tech.nom&&i.date_debut&&i.date_fin&&i.date_debut<=ds&&i.date_fin>=ds;
@@ -1492,7 +1515,7 @@ function rPlanning(){
     }).join('');
     return'<div class="plan-row"><div class="plan-tech">'+escH(tech.nom.split(' ')[0])+'</div>'+cells+'</div>';
   }).join('');
-  var weekLabel=fmtDate(weekStart.toISOString().split('T')[0])+' — '+fmtDate(days[6].toISOString().split('T')[0]);
+  var weekLabel=fmtDate(ymd(weekStart))+' — '+fmtDate(ymd(days[6]));
   return'<div class="card"><div class="ch">'+
     '<span class="ct2">Planning semaine du '+weekLabel+'</span>'+
     '<div class="plan-week-nav">'+
@@ -2338,7 +2361,8 @@ function confirmDel(){if(document.getElementById('dc'))return;var div=document.c
 function doDel(){
   var tables={inter:'interventions',cli:'clients',tech:'techniciens',stock:'stock'};
   var tbl=tables[MODE];
-  if(tbl){D[tbl]=D[tbl].filter(function(x){return x.id!==EID;});
+  if(tbl){var delId=EID;D[tbl]=D[tbl].filter(function(x){return x.id!==delId;});
+    if(SUPA_OK)supaDelete(tbl,delId);
     save();closeModal();draw(PAGE,LS);}
 }
 function switchTab(t){document.querySelectorAll('.mtab').forEach(function(el){el.classList.toggle('on',el.dataset.tab===t);});document.querySelectorAll('.tab-pane').forEach(function(el){el.classList.toggle('show',el.id==='tab-'+t);});}
@@ -2607,7 +2631,7 @@ function mTech(id){
     '<div class="fg"><label class="fl">Nom complet</label><input class="fi" id="fnom" value="'+escH(d.nom||'')+'"></div>'+
     '<div class="fg2">'+
       '<div class="fg"><label class="fl">Fonction</label><select class="fi" id="ffonc">'+opts(FONCTIONS,curFonc)+'</select></div>'+
-      '<div class="fg"><label class="fl">Zone d\'intervention</label><select class="fi" id="fzone">'+opts(ZONES,d.zone)+'</select></div>'+
+      '<div class="fg"><label class="fl">Zone d\'intervention</label><select class="fi" id="fzone"><option value="">Toutes zones</option>'+opts(ZONES,d.zone)+'</select></div>'+
     '</div>'+
     '<div class="fg2"><div class="fg"><label class="fl">Téléphone</label><input class="fi" id="ftel" value="'+escH(d.tel||'')+'"></div>'+
     '<div class="fg"><label class="fl">Email</label><input class="fi" id="femail" type="email" value="'+escH(d.email||'')+'"></div></div>'+
