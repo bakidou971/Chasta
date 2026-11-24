@@ -491,6 +491,9 @@ var STOCK_PAGE_NUM=1;
 var PS=50,CP=1,LS='';
 var PLAN_WEEK_OFFSET=0;
 var ANALYTICS_PERIOD='month';
+var CA_VIEW='month',CA_YEAR=new Date().getFullYear();
+function setCaView(v){CA_VIEW=v;if(v==='year')CA_YEAR=2026;else if(CA_YEAR<2026)CA_YEAR=2026;draw('dashboard','');}
+function caYearShift(d){CA_YEAR+=d;draw('dashboard','');}
 var CURRENT_USER=null;
 var ZONES=['Herbay-sur-Seine (02)','Neuilly-sur-Seine (01)','Orlean (05)','Rouen (06)','Lille (08)','Trappes (03)','Dunkerque (07)','Autre'];
 var FONCTIONS=['Semi-itinérant','Électro-technicien','Responsable'];
@@ -1847,24 +1850,33 @@ function rAnalytics(){
       '<div style="margin-top:8px;font-size:10px;color:var(--greentxt);font-weight:600">'+k.totalHist+' interventions archivées</div>'+
     '</div>'+
   '</div>';
-  /* Évolution CA 12 mois */
-  var now=new Date();
-  var months12=[];
-  for(var mi=11;mi>=0;mi--){var d=new Date(now.getFullYear(),now.getMonth()-mi,1);months12.push({year:d.getFullYear(),month:d.getMonth(),label:['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'][d.getMonth()],ca:0,cnt:0});}
+  /* Évolution CA : mensuel / trimestriel / annuel (10 ans) */
+  var MN=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  var bars=[];
+  if(CA_VIEW==='month'){for(var q=0;q<12;q++)bars.push({label:MN[q],y:CA_YEAR,m:q,ca:0,click:true});}
+  else if(CA_VIEW==='quarter'){for(var q2=0;q2<4;q2++)bars.push({label:'T'+(q2+1)+' ('+MN[q2*3]+'–'+MN[q2*3+2]+')',y:CA_YEAR,q:q2,ca:0});}
+  else{for(var y0=2026;y0<2036;y0++)bars.push({label:String(y0),y:y0,ca:0});}
   hist.forEach(function(i){
     if(!i.date_cloture)return;
-    var d=new Date(i.date_cloture);
-    var m=months12.find(function(x){return x.year===d.getFullYear()&&x.month===d.getMonth();});
-    if(m){m.ca+=dvCA(i)||0;m.cnt++;}
+    var d=new Date(i.date_cloture);var yy=d.getFullYear(),mm=d.getMonth();
+    bars.forEach(function(b){
+      var ok=CA_VIEW==='month'?(b.y===yy&&b.m===mm):CA_VIEW==='quarter'?(b.y===yy&&b.q===Math.floor(mm/3)):(b.y===yy);
+      if(ok)b.ca+=dvCA(i)||0;
+    });
   });
-  var maxCA=Math.max.apply(null,[1].concat(months12.map(function(m){return m.ca;})));
-  var caEvol='<div style="display:flex;align-items:flex-end;gap:4px;height:150px;padding:8px 0">'+
-    months12.map(function(m){
-      var h=Math.max(4,Math.round(m.ca/maxCA*70));
-      return'<div class="ca-col" onclick="showMonth('+m.year+','+m.month+')" title="Voir les interventions de '+m.label+' '+m.year+'" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">'+
-        (m.ca?'<div style="font-size:7px;color:var(--txt2);writing-mode:vertical-rl;transform:rotate(180deg)">'+eur(m.ca)+'</div>':'<div style="font-size:7px">&nbsp;</div>')+
-        '<div style="width:100%;background:#16a34a;border-radius:3px 3px 0 0;height:'+h+'px"></div>'+
-        '<div style="font-size:8px;color:var(--txt3)">'+m.label+'</div>'+
+  var maxCA=Math.max.apply(null,[1].concat(bars.map(function(b){return b.ca;})));
+  var totCA=bars.reduce(function(a,b){return a+b.ca;},0);
+  var caTabs='<div class="period-tabs" style="margin-bottom:8px">'+[['month','Mensuel'],['quarter','Trimestriel'],['year','Annuel (10 ans)']].map(function(x){return'<div class="ptab'+(CA_VIEW===x[0]?' on':'')+'" onclick="setCaView(\''+x[0]+'\')">'+x[1]+'</div>';}).join('')+'</div>';
+  var caNav=CA_VIEW==='year'?'<b>2026 → 2035</b>':'<button class="bs" onclick="caYearShift(-1)"'+(CA_YEAR<=2026?' disabled':'')+'>‹</button> <b>'+CA_YEAR+'</b> <button class="bs" onclick="caYearShift(1)">›</button>';
+  var caEvol=caTabs+'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:12px"><div>'+caNav+'</div><div style="color:var(--txt2)">Total : <b>'+eur(totCA)+'</b></div></div>'+
+    '<div style="display:flex;align-items:flex-end;gap:4px;height:150px;padding:8px 0">'+
+    bars.map(function(b){
+      var hh=Math.max(4,Math.round(b.ca/maxCA*70));
+      var oc=b.click?' onclick="showMonth('+b.y+','+b.m+')" title="Voir les interventions de '+b.label+' '+b.y+'"':'';
+      return'<div class="'+(b.click?'ca-col':'')+'"'+oc+' style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0">'+
+        (b.ca?'<div style="font-size:7px;color:var(--txt2);writing-mode:vertical-rl;transform:rotate(180deg)">'+eur(b.ca)+'</div>':'<div style="font-size:7px">&nbsp;</div>')+
+        '<div style="width:100%;background:#16a34a;border-radius:3px 3px 0 0;height:'+hh+'px"></div>'+
+        '<div style="font-size:8px;color:var(--txt3);text-align:center">'+b.label+'</div>'+
       '</div>';
     }).join('')+
   '</div>';
@@ -1926,7 +1938,7 @@ function rAnalytics(){
   }).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--txt2);padding:14px">Aucune récurrence détectée ✓</td></tr>';
 
   return pTabs+kpis+
-  '<div class="chart-box" style="margin-top:12px"><div class="chart-title">Évolution CA sur 12 mois <span style="font-weight:500;color:var(--txt3);font-size:10px">— cliquer sur un mois pour voir ses interventions par zone</span></div>'+caEvol+'</div>'+
+  '<div class="chart-box" style="margin-top:12px"><div class="chart-title">Évolution du CA <span style="font-weight:500;color:var(--txt3);font-size:10px">— en vue mensuelle, cliquer sur un mois pour voir ses interventions par zone</span></div>'+caEvol+'</div>'+
   '<div class="card" style="margin-top:12px"><div class="ch"><span class="ct2">Performance par technicien</span></div>'+
     '<div class="tw"><table class="tbl"><thead><tr><th>Nom</th><th>Fonction</th><th style="text-align:center">Actives</th><th style="text-align:center">Terminées</th><th style="text-align:center">Taux clôture</th><th style="text-align:center">Durée moy. (mois)</th><th>CA rel.</th><th style="text-align:right">CA généré</th></tr></thead><tbody>'+techRows+'</tbody></table></div>'+
   '</div>'+
