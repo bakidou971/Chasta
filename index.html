@@ -495,7 +495,7 @@ var CA_VIEW='month',CA_YEAR=new Date().getFullYear();
 function setCaView(v){CA_VIEW=v;if(v==='year')CA_YEAR=2026;else if(CA_YEAR<2026)CA_YEAR=2026;draw('dashboard','');}
 function caYearShift(d){CA_YEAR+=d;draw('dashboard','');}
 var CURRENT_USER=null;
-var ZONES=['Herbay-sur-Seine (02)','Neuilly-sur-Seine (01)','Orlean (05)','Rouen (06)','Lille (08)','Trappes (03)','Dunkerque (07)','Autre'];
+var ZONES=['Herblay-sur-Seine (02)','Neuilly-sur-Seine (01)','Orléans (05)','Rouen (06)','Lille (08)','Trappes (03)','Dunkerque (07)','Autre'];
 var FONCTIONS=['Semi-itinérant','Électro-technicien','Responsable'];
 var MARQUES=['MARQUE GELEE','IMER','HUCHEZ','TEA','VERLINDE','AUTRES','CMCO','TRACTEL','PARSON','TELIP','REMA','SVERO','HADEF','COMEGE','FIXATOR','DELTA'];
 var SM=['','En cours',"En attentes d'acceptation",'Devis fait','Finis'];
@@ -777,7 +777,19 @@ function load(){
   }
   });
 }
-function saveLocal(){D.users=USERS;D.journal=JOURNAL;try{localStorage.setItem(SK,JSON.stringify(D));}catch(e){}}
+var ZONE_RENAME={'Herbay-sur-Seine (02)':'Herblay-sur-Seine (02)','Orlean (05)':'Orléans (05)'};
+function fixZoneNames(){
+  var ch=false;
+  function fx(o,f){if(o&&ZONE_RENAME[o[f]]){o[f]=ZONE_RENAME[o[f]];ch=true;}}
+  ['clients','techniciens','interventions','historique'].forEach(function(t){(D[t]||[]).forEach(function(r){fx(r,'zone');});});
+  (D.materiels||[]).forEach(function(m){fx(m,'localisation');});
+  try{var k=SK+'_zmap',m=JSON.parse(localStorage.getItem(k)||'{}');Object.keys(m).forEach(function(i){if(ZONE_RENAME[m[i]]){m[i]=ZONE_RENAME[m[i]];ch=true;}});localStorage.setItem(k,JSON.stringify(m));}catch(e){}
+  return ch;
+}
+function ZMAP_KEY(){return SK+'_zmap';}
+function rememberZones(){try{var m=JSON.parse(localStorage.getItem(ZMAP_KEY())||'{}');(D.clients||[]).forEach(function(c){if(c.zone)m[c.id]=c.zone;});localStorage.setItem(ZMAP_KEY(),JSON.stringify(m));}catch(e){}}
+function restoreZones(){try{var m=JSON.parse(localStorage.getItem(ZMAP_KEY())||'{}');var ch=false;(D.clients||[]).forEach(function(c){if(!c.zone){var z=m[c.id]||(c.id===1&&c.nom==='H. CHEVALIER'?'Herblay-sur-Seine (02)':'');if(z){c.zone=z;ch=true;}}});return ch;}catch(e){return false;}}
+function saveLocal(){fixZoneNames();restoreZones();rememberZones();D.users=USERS;D.journal=JOURNAL;try{localStorage.setItem(SK,JSON.stringify(D));}catch(e){}}
 function save(){
   saveLocal();
   toast('Données sauvegardées','success',2000);
@@ -911,7 +923,12 @@ function editInter(id){mInter(id);}
 function mergeById(remote,local){
   if(!remote||!remote.length)return local||[];
   var map={};remote.forEach(function(r){map[r.id]=r;});
-  (local||[]).forEach(function(l){if(map[l.id]===undefined)map[l.id]=l;});
+  (local||[]).forEach(function(l){
+    if(map[l.id]===undefined){map[l.id]=l;return;}
+    var r=map[l.id];
+    /* champ vide côté serveur (ex. colonne zone absente) : on garde la valeur locale */
+    ['zone'].forEach(function(f){if((r[f]===undefined||r[f]===null||r[f]==='')&&l[f])r[f]=l[f];});
+  });
   return Object.keys(map).map(function(k){return map[k];});
 }
 function calBetween(d1,d2){if(!d1||!d2)return 0;return Math.round((new Date(d2)-new Date(d1))/(1000*60*60*24));}
@@ -1641,6 +1658,8 @@ async function loadFromSupa(){
       D.interventions = mergeById(results[0], D.interventions);
       D.historique    = mergeById(results[1], D.historique);
       D.clients       = mergeById(results[2], D.clients);
+      var zfix=fixZoneNames();
+      if(restoreZones()||zfix){saveLocal();if(SUPA_OK){supaUpsert('clients',D.clients);supaUpsert('techniciens',D.techniciens);supaUpsert('interventions',D.interventions);supaUpsert('historique',D.historique);}}
       D.techniciens   = mergeById(results[3], D.techniciens);
       D.stock         = mergeById(results[4], D.stock);
       D.users         = results[5].length ? results[5] : D.users;
